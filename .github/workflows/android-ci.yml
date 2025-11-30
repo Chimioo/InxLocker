@@ -115,17 +115,18 @@ jobs:
         if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
         continue-on-error: true
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BOT_CI_SESSION: ${{ secrets.TELEGRAM_BOT_CI_SESSION }}
+          COMMIT_MESSAGE: ${{ format('{0}', github.event.head_commit.message) }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          ANOTHER: ${{ github.event.head_commit.author.name }}
         run: |
-          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+          if [ -z "${BOT_TOKEN:-}" ] || [ -z "${CHAT_ID:-}" ] || [ -z "${BOT_CI_SESSION:-}" ]; then
             echo "未配置 Telegram Secrets，跳过发送 APK";
             exit 0;
           fi
           FILE=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
           [ -f "$FILE" ] || exit 0
-          CAPTION="InxLocker APK: $(basename "$FILE")"
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
-            -F chat_id="${TELEGRAM_CHAT_ID}" \
-            -F document="@${FILE}" \
-            -F caption="$CAPTION"
+          pip3 install telethon
+          python3 .github/bot.py "$FILE"
