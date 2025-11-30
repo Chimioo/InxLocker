@@ -111,21 +111,6 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-      - name: Notify Telegram (success)
-        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
-            echo "未配置 Telegram Secrets，跳过消息通知";
-            exit 0;
-          fi
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          TEXT="✅ 构建成功\n仓库: ${GITHUB_REPOSITORY}\n分支: ${GITHUB_REF_NAME}\n提交: ${SHORT_SHA}\n触发者: ${GITHUB_ACTOR}\n运行: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode="Markdown" -d text="$TEXT"
-
       - name: Send APK to Telegram (optional)
         if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
         continue-on-error: true
@@ -144,18 +129,3 @@ jobs:
             -F chat_id="${TELEGRAM_CHAT_ID}" \
             -F document="@${FILE}" \
             -F caption="$CAPTION"
-
-      - name: Notify Telegram (failure)
-        if: ${{ failure() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
-            echo "未配置 Telegram Secrets，跳过失败通知";
-            exit 0;
-          fi
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          TEXT="❌ 构建失败\n仓库: ${GITHUB_REPOSITORY}\n分支: ${GITHUB_REF_NAME}\n提交: ${SHORT_SHA}\n触发者: ${GITHUB_ACTOR}\n运行: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode="Markdown" -d text="$TEXT"
