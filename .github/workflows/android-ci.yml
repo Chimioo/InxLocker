@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - main
-      paths: 
-      - app/**
+    paths: 
+      - 'app/**'
   pull_request:
     branches: ["**"]
-      paths:
-      -app/**
+    paths:
+      - 'app/**'
 
 jobs:
   build:
@@ -52,7 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${SIGNING_KEYSTORE_BASE64:-}" ]; then
-            echo "未配置签名所需 Secrets，跳过生成密钥库文件";
+            echo "未配置签名所需 Secrets,跳过生成密钥库文件";
             exit 0;
           fi
           echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > keystore.jks
@@ -70,7 +70,7 @@ jobs:
           ZIPALIGN="$BUILD_TOOLS_DIR/zipalign"
           APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
           if [ -z "${SIGNING_KEY_ALIAS:-}" ] || [ -z "${SIGNING_KEY_PASSWORD:-}" ] || [ -z "${SIGNING_STORE_PASSWORD:-}" ] || [ ! -f keystore.jks ]; then
-            echo "未配置签名所需 Secrets，跳过签名";
+            echo "未配置签名所需 Secrets,跳过签名";
             exit 0;
           fi
           ORIG_APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
@@ -95,7 +95,7 @@ jobs:
           echo "Release APK: $ORIG_APK"
           sha256sum "$ORIG_APK" || true
 
-      - name: 验证 APK（非 fork 运行）
+      - name: 验证 APK(非 fork 运行)
         if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
         run: |
           BUILD_TOOLS_DIR="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools/36.0.0"
@@ -105,7 +105,7 @@ jobs:
             echo "未找到 Release APK。" >&2
             exit 1
           fi
-          # 验证 APK 签名；非零退出表示验证失败
+          # 验证 APK 签名;非零退出表示验证失败
           "$APKSIGNER" verify --print-certs "$FILE"
 
       - name: Upload APK artifact
@@ -128,7 +128,7 @@ jobs:
           ANOTHER: ${{ github.event.head_commit.author.name }}
         run: |
           if [ -z "${BOT_TOKEN:-}" ] || [ -z "${CHAT_ID:-}" ] || [ -z "${BOT_CI_SESSION:-}" ]; then
-            echo "未配置 Telegram Secrets，跳过发送 APK";
+            echo "未配置 Telegram Secrets,跳过发送 APK";
             exit 0;
           fi
           FILE=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
