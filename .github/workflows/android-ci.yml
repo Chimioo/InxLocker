@@ -128,5 +128,5 @@ jobs:
           fi
           FILE=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
           [ -f "$FILE" ] || exit 0
-          pip3 install telethon
+          pip install telethon aiohttp
           python3 .github/bot.py "$FILE"
