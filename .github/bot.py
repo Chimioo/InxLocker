@@ -17,7 +17,6 @@ BOT_CI_SESSION = os.environ.get("BOT_CI_SESSION")
 ANOTHER = os.environ.get("ANOTHER")
 
 MSG_TEMPLATE = """
-> {hitokoto}
 
 New push to Github
 ```
@@ -25,6 +24,9 @@ New push to Github
 ```
 by {another}
 See commit detail [here]({commit_url})
+
+>{hitokoto}
+
 """.strip()
 
 async def get_hitokoto():
