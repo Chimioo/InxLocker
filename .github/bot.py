@@ -2,6 +2,7 @@ import sys
 from telethon import TelegramClient
 import asyncio
 from telethon.sessions import StringSession
+from glob import glob
 import os
 
 API_ID = 611335
