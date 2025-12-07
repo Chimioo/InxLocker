@@ -17,16 +17,12 @@ BOT_CI_SESSION = os.environ.get("BOT_CI_SESSION")
 ANOTHER = os.environ.get("ANOTHER")
 
 MSG_TEMPLATE = """
-
-New push to Github
-```
-{commit_message}
-```
+<b>New push to Github</b>
+<pre>{commit_message}</pre>
 by {another}
-See commit detail [here]({commit_url})
+See commit detail <a href="{commit_url}">here</a>
 
->{hitokoto}
-
+<blockquote>{hitokoto}</blockquote>
 """.strip()
 
 async def get_hitokoto():
@@ -38,6 +34,10 @@ async def get_hitokoto():
                     hitokoto = data.get('hitokoto', '')
                     from_who = data.get('from_who', '')
                     from_text = data.get('from', '')
+                   
+                    hitokoto = hitokoto.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    from_who = from_who.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    from_text = from_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                     
                     if from_who and from_text:
                         return f"{hitokoto} —— 「{from_text}」{from_who}"
@@ -56,20 +56,25 @@ async def send_telegram_message(file_patterns):
         files.extend(glob(pat))
     
     hitokoto = await get_hitokoto()
+    
+    # HTML转义 commit_message 和 another
+    commit_message_escaped = COMMIT_MESSAGE.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    another_escaped = ANOTHER.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    
     caption = MSG_TEMPLATE.format(
         hitokoto=hitokoto,
-        commit_message=COMMIT_MESSAGE,
+        commit_message=commit_message_escaped,
         commit_url=COMMIT_URL,
-        another=ANOTHER,
+        another=another_escaped,
     )
     
     async with TelegramClient(StringSession(BOT_CI_SESSION), api_id=API_ID, api_hash=API_HASH) as client:
         await client.start(bot_token=BOT_TOKEN)
         
         if files:
-            await client.send_file(entity=CHAT_ID, file=files, caption=caption, parse_mode="markdown")
+            await client.send_file(entity=CHAT_ID, file=files, caption=caption, parse_mode="html")
         else:
-            await client.send_message(CHAT_ID, caption, parse_mode="markdown")
+            await client.send_message(CHAT_ID, caption, parse_mode="html")
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
