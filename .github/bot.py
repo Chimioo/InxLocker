@@ -17,7 +17,7 @@ BOT_CI_SESSION = os.environ.get("BOT_CI_SESSION")
 ANOTHER = os.environ.get("ANOTHER")
 
 MSG_TEMPLATE = """
-{hitokoto}
+> {hitokoto}
 
 New push to Github
 ```

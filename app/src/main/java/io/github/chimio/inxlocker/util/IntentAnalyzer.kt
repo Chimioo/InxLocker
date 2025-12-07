@@ -21,7 +21,6 @@ object IntentAnalyzer {
 
         if (intent.action !in allowedActions) return Result.ShouldNotRedirect
 
-        // 判断是否命中重定向条件
         intent.takeIf {
             mimeTypeFromIntent(it) || hasValidAction(it) || mimeTypeFromCIntentData(it)
         }?.takeIf {
@@ -59,8 +58,13 @@ object IntentAnalyzer {
     //字符串分析大法，不优雅，但是好像没什么问题
     private fun mimeTypeFromCIntentData(intent: Intent): Boolean {
         val uri = intent.data?.toString().orEmpty()
-        return (uri.endsWith(".apk") || uri.endsWith(".apks") || uri.endsWith(".apk.1")) &&
+        return hasApkFileExtension(uri) &&
                 (uri.startsWith("file://") || uri.startsWith("content://"))
+    }
+
+    private fun hasApkFileExtension(uri: String): Boolean {
+        val ext = uri.lowercase()
+        return listOf(".apk", ".apks", ".apk.1").any { ext.endsWith(it) }
     }
 
     private fun hasSpecificComponent(intent: Intent): Boolean {
