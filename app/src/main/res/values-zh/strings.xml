@@ -25,6 +25,14 @@
     <string name="intercept_uninstall_desc">仅拦截Intent，需要安装器支持卸载</string>
     <string name="intercept_uninstall_enabled_toast">拦截卸载已开启</string>
     <string name="intercept_uninstall_disabled_toast">拦截卸载已关闭</string>
+    <string name="intercept_session_install_title">拦截会话安装</string>
+    <string name="intercept_session_install_desc">拦截 CONFIRM_INSTALL 请求</string>
+    <string name="intercept_session_install_enabled_toast">拦截会话安装已开启</string>
+    <string name="intercept_session_install_disabled_toast">拦截会话安装已关闭</string>
+    <string name="fix_permissions_title">修复权限</string>
+    <string name="fix_permissions_desc">在 Android 14+ 上强制通过会话路径权限检查</string>
+    <string name="fix_permissions_enabled_toast">权限修复已开启</string>
+    <string name="fix_permissions_disabled_toast">权限修复已关闭</string>
     <string name="instructions_title">使用说明</string>
     <string name="instructions_content">确保模块已在 Xposed 框架中激活\n选择默认安装器后，系统会优先使用该应用安装 APK\n开启拦截卸载后，卸载操作会重定向到指定安装器\n可在 Xposed 管理器中找到应用设置</string>
     <string name="close">关闭</string>

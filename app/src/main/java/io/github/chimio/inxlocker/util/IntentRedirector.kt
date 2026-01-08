@@ -52,6 +52,7 @@ object IntentRedirector {
         YLog.i(tag, "Intent重定向:")
         YLog.i(tag, "- 目标 package: ${current.`package` ?: "<系统默认>"}")
         YLog.i(tag, "- Intent action: ${current.action}")
+        YLog.i(tag, "- Intent extras: ${IntentAnalyzer.formatExtras(current)}")
         if (current.action == ACTION_DELETE || current.action == ACTION_UNINSTALL_PACKAGE) {
             YLog.i(tag, "- 拦截卸载Intent，重定向到指定安装器")
         }
