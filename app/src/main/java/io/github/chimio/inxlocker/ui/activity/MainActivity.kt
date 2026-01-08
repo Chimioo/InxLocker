@@ -377,6 +377,10 @@ class MainActivity : ComponentActivity() {
                                     onCheckedChange = { newState ->
                                         interceptSessionInstallEnabled = newState
                                         saveInterceptSessionInstallEnabled(newState)
+                                        if (!newState) {
+                                            fixPermissionsEnabled = false
+                                            saveFixPermissionsEnabled(false)
+                                        }
                                         Toast.makeText(
                                             context,
                                             if (newState) context.getString(R.string.intercept_session_install_enabled_toast) else context.getString(
