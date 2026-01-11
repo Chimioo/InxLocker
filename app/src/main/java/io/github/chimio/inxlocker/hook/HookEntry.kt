@@ -4,12 +4,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import androidx.core.content.ContextCompat
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.core.annotation.LegacyHookApi
 import com.highcapable.yukihookapi.hook.factory.configs
 import com.highcapable.yukihookapi.hook.factory.encase
+import com.highcapable.yukihookapi.hook.factory.field
+import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.PackageParam
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
@@ -24,8 +27,8 @@ import io.github.chimio.inxlocker.util.i
 class HookEntry : IYukiHookXposedInit {
 
     companion object {
-
         private const val TAG = "InstallerRedirect"
+        private val isFixingPermissions = ThreadLocal<Boolean>()
     }
 
     private fun registerPrefsUpdateReceiver(context: Context?) {
@@ -57,6 +60,7 @@ class HookEntry : IYukiHookXposedInit {
         }
         loadSystem {
             hookActivityStarterExecute()
+            hookPackageInstallerSession()
         }
     }
 
@@ -173,6 +177,63 @@ class HookEntry : IYukiHookXposedInit {
                     } catch (e: Exception) {
                         YLog.e(TAG, "ActivityStarter.execute Hook 错误: ${e.message}", e)
                     }
+                }
+            }
+        }
+    }
+
+    private fun PackageParam.hookPackageInstallerSession() {
+        if (Build.VERSION.SDK_INT < 34) return
+
+        "com.android.server.pm.PackageInstallerSession".toClassOrNull()?.method {
+            name = "generateInfoInternal"
+        }?.hook {
+            before {
+                try {
+                    PrefsProvider.reload()
+                    if (PrefsProvider.getBoolean("fix_permissions", false)) {
+                        isFixingPermissions.set(true)
+                    }
+                } catch (e: Exception) {
+                    YLog.e(TAG, "generateInfoInternal Hook before 错误: ${e.message}", e)
+                }
+            }
+            after {
+                if (isFixingPermissions.get() == true) {
+                    isFixingPermissions.set(false)
+                    try {
+                        val info = result // SessionInfo 对象
+                        if (info != null) {
+                            val infoClass = info.javaClass
+                            // 检查 resolvedBaseCodePath 是否为空
+                            val currentPath = infoClass.field { name = "resolvedBaseCodePath" }.get(info).string()
+                            if (currentPath.isEmpty()) {
+                                // 显式使用 instanceClass (即 PackageInstallerSession.class) 来调用 field
+                                val mResolvedBaseFile = instanceClass?.field { name = "mResolvedBaseFile" }?.get(instance)?.any() as? java.io.File
+                                if (mResolvedBaseFile != null) {
+                                    infoClass.field { name = "resolvedBaseCodePath" }.get(info).set(mResolvedBaseFile.absolutePath)
+                                    YLog.i(TAG, "权限绕过可能失败，已手动补全路径: ${mResolvedBaseFile.absolutePath}")
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        YLog.e(TAG, "generateInfoInternal Hook after 修复失败: ${e.message}")
+                    }
+                }
+            }
+        }
+
+        "android.app.ContextImpl".toClassOrNull()?.method {
+            name = "checkCallingOrSelfPermission"
+            param(String::class.java)
+        }?.hook {
+            after {
+                try {
+                    if (isFixingPermissions.get() == true && args(0).string() == "android.permission.READ_INSTALLED_SESSION_PATHS") {
+                        result = 0 // PackageManager.PERMISSION_GRANTED
+                    }
+                } catch (e: Exception) {
+                    // Ignore
                 }
             }
         }

@@ -18,6 +18,7 @@ object IntentAnalyzer {
         YLog.d(TAG, "Intent type: ${intent.type}")
         YLog.d(TAG, "Intent data: ${intent.data}")
         YLog.d(TAG, "Intent clipData: ${intent.clipData}")
+        YLog.d(TAG, "Intent extras: ${formatExtras(intent)}")
 
         if (intent.action !in allowedActions) return Result.ShouldNotRedirect
 
@@ -35,11 +36,27 @@ object IntentAnalyzer {
                         Result.ShouldNotRedirect
                     }
                 }
+                "android.content.pm.action.CONFIRM_INSTALL" -> {
+                    if (PrefsProvider.getBoolean("intercept_session_install", false)) {
+                        Result.ShouldRedirect
+                    } else {
+                        Result.ShouldNotRedirect
+                    }
+                }
                 else -> Result.ShouldRedirect
             }
         } ?: Result.ShouldNotRedirect
     }.getOrElse {
         Result.ShouldNotRedirect
+    }
+
+    fun formatExtras(intent: Intent): String {
+        return intent.extras?.let { bundle ->
+            if (bundle.isEmpty) "{}"
+            else bundle.keySet().joinToString(", ", "{", "}") { key ->
+                "$key=${bundle.get(key)}"
+            }
+        } ?: "null"
     }
 
     private fun hasValidAction(intent: Intent): Boolean {

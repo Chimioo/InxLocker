@@ -5,11 +5,17 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +37,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,6 +73,7 @@ import io.github.chimio.inxlocker.ui.widget.SettingsGroup
 import io.github.chimio.inxlocker.ui.widget.SettingsItem
 import io.github.chimio.inxlocker.ui.widget.SwitchGroup
 import io.github.chimio.inxlocker.ui.widget.SwitchItem
+import io.github.chimio.inxlocker.ui.widget.SettingsSwitchRow
 import io.github.chimio.inxlocker.util.Broadcasts
 
 data class InstallerApp(
@@ -190,6 +199,42 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun saveInterceptSessionInstallEnabled(enabled: Boolean) {
+        try {
+            prefs("selected_installer_package").edit {
+                putBoolean("intercept_session_install", enabled)
+            }
+            sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun getInterceptSessionInstallEnabled(): Boolean {
+        return try {
+            prefs("selected_installer_package").getBoolean("intercept_session_install", false)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun saveFixPermissionsEnabled(enabled: Boolean) {
+        try {
+            prefs("selected_installer_package").edit {
+                putBoolean("fix_permissions", enabled)
+            }
+            sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun getFixPermissionsEnabled(): Boolean {
+        return try {
+            prefs("selected_installer_package").getBoolean("fix_permissions", false)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -211,6 +256,9 @@ class MainActivity : ComponentActivity() {
         var hideIcon by remember { mutableStateOf(getHideIconState()) }
         var debugLogEnabled by remember { mutableStateOf(getDebugLogEnabled()) }
         var interceptUninstallEnabled by remember { mutableStateOf(getInterceptUninstallEnabled()) }
+        var interceptSessionInstallEnabled by remember { mutableStateOf(getInterceptSessionInstallEnabled()) }
+        var fixPermissionsEnabled by remember { mutableStateOf(getFixPermissionsEnabled()) }
+
         val selectedInstaller = installerList.find { it.packageName == selectedPackage }
 
         Scaffold(
@@ -248,60 +296,131 @@ class MainActivity : ComponentActivity() {
                 item {
                     SwitchGroup(
                         title = stringResource(R.string.settings),
-                        items = listOf(
-                            SwitchItem(
-                                icon = Icons.Default.Info,
-                                title = stringResource(R.string.hide_icon_title),
-                                subtitle = stringResource(R.string.hide_icon_desc),
-                                isChecked = hideIcon,
-                                onCheckedChange = { newState ->
-                                    hideIcon = newState
-                                    saveHideIconState(newState)
-                                    Toast.makeText(
-                                        context,
-                                        if (newState) context.getString(R.string.hide_icon_enabled_toast) else context.getString(
-                                            R.string.hide_icon_disabled_toast
-                                        ),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            ),
-                            SwitchItem(
-                                icon = Icons.Default.DateRange,
-                                title = stringResource(R.string.debug_log_title),
-                                subtitle = stringResource(R.string.debug_log_desc),
-                                isChecked = debugLogEnabled,
-                                onCheckedChange = { newState ->
-                                    debugLogEnabled = newState
-                                    saveDebugLogEnabled(newState)
-                                    Toast.makeText(
-                                        context,
-                                        if (newState) context.getString(R.string.debug_log_enabled_toast) else context.getString(
-                                            R.string.debug_log_disabled_toast
-                                        ),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            ),
-                            SwitchItem(
-                                icon = Icons.Default.Delete,
-                                title = stringResource(R.string.intercept_uninstall_title),
-                                subtitle = stringResource(R.string.intercept_uninstall_desc),
-                                isChecked = interceptUninstallEnabled,
-                                onCheckedChange = { newState ->
-                                    interceptUninstallEnabled = newState
-                                    saveInterceptUninstallEnabled(newState)
-                                    Toast.makeText(
-                                        context,
-                                        if (newState) context.getString(R.string.intercept_uninstall_enabled_toast) else context.getString(
-                                            R.string.intercept_uninstall_disabled_toast
-                                        ),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+                        items = buildList {
+                            add(
+                                SwitchItem(
+                                    icon = Icons.Default.Info,
+                                    title = stringResource(R.string.hide_icon_title),
+                                    subtitle = stringResource(R.string.hide_icon_desc),
+                                    isChecked = hideIcon,
+                                    onCheckedChange = { newState ->
+                                        hideIcon = newState
+                                        saveHideIconState(newState)
+                                        Toast.makeText(
+                                            context,
+                                            if (newState) context.getString(R.string.hide_icon_enabled_toast) else context.getString(
+                                                R.string.hide_icon_disabled_toast
+                                            ),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                )
                             )
-                        )
+                            add(
+                                SwitchItem(
+                                    icon = Icons.Default.DateRange,
+                                    title = stringResource(R.string.debug_log_title),
+                                    subtitle = stringResource(R.string.debug_log_desc),
+                                    isChecked = debugLogEnabled,
+                                    onCheckedChange = { newState ->
+                                        debugLogEnabled = newState
+                                        saveDebugLogEnabled(newState)
+                                        Toast.makeText(
+                                            context,
+                                            if (newState) context.getString(R.string.debug_log_enabled_toast) else context.getString(
+                                                R.string.debug_log_disabled_toast
+                                            ),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                )
+                            )
+                            add(
+                                SwitchItem(
+                                    icon = Icons.Default.Delete,
+                                    title = stringResource(R.string.intercept_uninstall_title),
+                                    subtitle = stringResource(R.string.intercept_uninstall_desc),
+                                    isChecked = interceptUninstallEnabled,
+                                    onCheckedChange = { newState ->
+                                        interceptUninstallEnabled = newState
+                                        saveInterceptUninstallEnabled(newState)
+                                        Toast.makeText(
+                                            context,
+                                            if (newState) context.getString(R.string.intercept_uninstall_enabled_toast) else context.getString(
+                                                R.string.intercept_uninstall_disabled_toast
+                                            ),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                )
+                            )
+                        }
                     )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column {
+                            SettingsSwitchRow(
+                                item = SwitchItem(
+                                    icon = Icons.Default.Notifications,
+                                    title = stringResource(R.string.intercept_session_install_title),
+                                    subtitle = stringResource(R.string.intercept_session_install_desc),
+                                    isChecked = interceptSessionInstallEnabled,
+                                    onCheckedChange = { newState ->
+                                        interceptSessionInstallEnabled = newState
+                                        saveInterceptSessionInstallEnabled(newState)
+                                        if (!newState) {
+                                            fixPermissionsEnabled = false
+                                            saveFixPermissionsEnabled(false)
+                                        }
+                                        Toast.makeText(
+                                            context,
+                                            if (newState) context.getString(R.string.intercept_session_install_enabled_toast) else context.getString(
+                                                R.string.intercept_session_install_disabled_toast
+                                            ),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                ),
+                                showDivider = Build.VERSION.SDK_INT >= 34 && interceptSessionInstallEnabled
+                            )
+
+                            AnimatedVisibility(
+                                visible = Build.VERSION.SDK_INT >= 34 && interceptSessionInstallEnabled,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                SettingsSwitchRow(
+                                    item = SwitchItem(
+                                        icon = Icons.Default.Lock,
+                                        title = stringResource(R.string.fix_permissions_title),
+                                        subtitle = stringResource(R.string.fix_permissions_desc),
+                                        isChecked = fixPermissionsEnabled,
+                                        onCheckedChange = { newState ->
+                                            fixPermissionsEnabled = newState
+                                            saveFixPermissionsEnabled(newState)
+                                            Toast.makeText(
+                                                context,
+                                                if (newState) context.getString(R.string.fix_permissions_enabled_toast) else context.getString(
+                                                    R.string.fix_permissions_disabled_toast
+                                                ),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    ),
+                                    showDivider = false
+                                )
+                            }
+                        }
+                    }
                 }
 
                 item {
