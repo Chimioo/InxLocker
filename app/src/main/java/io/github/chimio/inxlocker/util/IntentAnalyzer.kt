@@ -36,7 +36,8 @@ object IntentAnalyzer {
                         Result.ShouldNotRedirect
                     }
                 }
-                "android.content.pm.action.CONFIRM_INSTALL" -> {
+                "android.content.pm.action.CONFIRM_INSTALL",
+                "android.content.pm.action.CONFIRM_PERMISSIONS" -> {
                     if (PrefsProvider.getBoolean("intercept_session_install", false)) {
                         Result.ShouldRedirect
                     } else {
@@ -63,6 +64,7 @@ object IntentAnalyzer {
         return intent.action in listOf(
             Intent.ACTION_INSTALL_PACKAGE,
             "android.content.pm.action.CONFIRM_INSTALL",
+            "android.content.pm.action.CONFIRM_PERMISSIONS",
             Intent.ACTION_UNINSTALL_PACKAGE,
             Intent.ACTION_DELETE
         )
@@ -93,6 +95,7 @@ object IntentAnalyzer {
         Intent.ACTION_VIEW,
         Intent.ACTION_INSTALL_PACKAGE,
         "android.content.pm.action.CONFIRM_INSTALL",
+        "android.content.pm.action.CONFIRM_PERMISSIONS",
         Intent.ACTION_UNINSTALL_PACKAGE,
         Intent.ACTION_DELETE
     )

@@ -146,36 +146,59 @@ class HookEntry : IYukiHookXposedInit {
     }
 
     fun PackageParam.hookActivityStarterExecute() {
-        "com.android.server.wm.ActivityStarter".toClassOrNull()?.apply {
-            resolve().firstMethod {
-                name = "execute"
-            }.hook {
-                before {
-                    try {
-                        PrefsProvider.reload()
-                        val mRequestField = instanceClass?.getDeclaredField("mRequest")
-                            ?.apply { isAccessible = true }
-                            ?: throw NoSuchFieldException("mRequest field not found")
+        val targetClass =
+            if (Build.VERSION.SDK_INT >= 29) "com.android.server.wm.ActivityStarter" else "com.android.server.am.ActivityStarter"
+        targetClass.toClassOrNull()?.apply {
+            if (Build.VERSION.SDK_INT >= 28) {
+                resolve().firstMethod {
+                    name = "execute"
+                }.hook {
+                    before {
+                        try {
+                            PrefsProvider.reload()
+                            val mRequestField = instanceClass?.getDeclaredField("mRequest")
+                                ?.apply { isAccessible = true }
+                                ?: throw NoSuchFieldException("mRequest field not found")
 
-                        val requestObject = mRequestField.get(instance)
-                            ?: throw NullPointerException("Request object is null")
+                            val requestObject = mRequestField.get(instance)
+                                ?: throw NullPointerException("Request object is null")
 
-                        val requestClass =
-                            "com.android.server.wm.ActivityStarter\$Request".toClassOrNull()
-                                ?: throw NullPointerException("ActivityStarter\$Request class not found")
+                            val requestClass =
+                                "${targetClass}\$Request".toClassOrNull()
+                                    ?: throw NullPointerException("ActivityStarter\$Request class not found")
 
-                        val intentField = requestClass.getDeclaredField("intent")
-                            .apply { isAccessible = true }
+                            val intentField = requestClass.getDeclaredField("intent")
+                                .apply { isAccessible = true }
 
-                        val intent = intentField.get(requestObject) as? Intent
+                            val intent = intentField.get(requestObject) as? Intent
 
-                        handleIntentIfNeeded(intent, "ActivityStarter.execute") {
-                            intent?.let { modifiedIntent ->
-                                intentField.set(requestObject, modifiedIntent)
+                            handleIntentIfNeeded(intent, "ActivityStarter.execute") {
+                                intent?.let { modifiedIntent ->
+                                    intentField.set(requestObject, modifiedIntent)
+                                }
                             }
+                        } catch (e: Exception) {
+                            YLog.e(TAG, "ActivityStarter.execute Hook 错误: ${e.message}", e)
                         }
-                    } catch (e: Exception) {
-                        YLog.e(TAG, "ActivityStarter.execute Hook 错误: ${e.message}", e)
+                    }
+                }
+            } else {
+                resolve().firstMethod {
+                    name = "startActivityMayWait"
+                }.hook {
+                    before {
+                        try {
+                            PrefsProvider.reload()
+                            val intentIndex = args.indexOfFirst { it is Intent }
+                            if (intentIndex != -1) {
+                                val intent = args(intentIndex).cast<Intent>()
+                                handleIntentIfNeeded(intent, "ActivityStarter.startActivityMayWait"){
+                                    args(intentIndex).set(intent)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            YLog.e(TAG, "ActivityStarter.startActivityMayWait Hook 错误: ${e.message}", e)
+                        }
                     }
                 }
             }
