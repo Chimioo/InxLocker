@@ -25,6 +25,12 @@
     <string name="intercept_uninstall_desc">Only intercept Intent, requires installer to support uninstall</string>
     <string name="intercept_uninstall_enabled_toast">Uninstall interception enabled</string>
     <string name="intercept_uninstall_disabled_toast">Uninstall interception disabled</string>
+    <string name="uninstall_follow_installer_title">Follow Installer</string>
+    <string name="uninstall_follow_installer_desc">Uninstall redirection target follows the default installer</string>
+    <string name="uninstall_default_uninstaller_title">Select Default Uninstaller</string>
+    <string name="uninstall_default_uninstaller_subtitle_default">System Default</string>
+    <string name="uninstall_default_uninstaller_system_label">System Default</string>
+    <string name="uninstall_default_uninstaller_system_desc">Follow system uninstaller</string>
     <string name="intercept_session_install_title">Intercept Session Install</string>
     <string name="intercept_session_install_desc">Intercept CONFIRM_INSTALL requests</string>
     <string name="intercept_session_install_enabled_toast">Session install interception enabled</string>

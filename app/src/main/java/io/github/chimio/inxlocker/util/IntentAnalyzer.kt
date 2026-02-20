@@ -4,6 +4,7 @@ import android.content.Intent
 import com.highcapable.yukihookapi.hook.log.YLog
 
 object IntentAnalyzer {
+
     sealed class Result {
         object ShouldRedirect : Result()
         object ShouldNotRedirect : Result()
@@ -22,10 +23,15 @@ object IntentAnalyzer {
 
         if (intent.action !in allowedActions) return Result.ShouldNotRedirect
 
+        val forcedComponentPackages = PrefsProvider
+            .getStringSet("forced_installer_components")
+            .mapNotNull { it.substringBefore('/', missingDelimiterValue = "").takeIf { pkg -> pkg.isNotBlank() } }
+            .toSet()
+
         intent.takeIf {
             mimeTypeFromIntent(it) || hasValidAction(it) || mimeTypeFromCIntentData(it)
         }?.takeIf {
-            !hasSpecificComponent(it)
+            !hasSpecificComponent(it) || (it.component?.packageName in forcedComponentPackages)
         }?.run {
             when (action) {
                 Intent.ACTION_DELETE,

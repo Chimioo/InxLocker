@@ -25,6 +25,12 @@
     <string name="intercept_uninstall_desc">仅拦截Intent，需要安装器支持卸载</string>
     <string name="intercept_uninstall_enabled_toast">拦截卸载已开启</string>
     <string name="intercept_uninstall_disabled_toast">拦截卸载已关闭</string>
+    <string name="uninstall_follow_installer_title">跟随安装器</string>
+    <string name="uninstall_follow_installer_desc">卸载重定向目标与默认安装器保持一致</string>
+    <string name="uninstall_default_uninstaller_title">选择默认卸载器</string>
+    <string name="uninstall_default_uninstaller_subtitle_default">系统默认</string>
+    <string name="uninstall_default_uninstaller_system_label">系统默认</string>
+    <string name="uninstall_default_uninstaller_system_desc">跟随系统卸载器</string>
     <string name="intercept_session_install_title">拦截会话安装</string>
     <string name="intercept_session_install_desc">拦截 CONFIRM_INSTALL 请求</string>
     <string name="intercept_session_install_enabled_toast">拦截会话安装已开启</string>

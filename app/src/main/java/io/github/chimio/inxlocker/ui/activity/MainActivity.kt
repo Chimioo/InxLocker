@@ -7,7 +7,6 @@ import android.content.pm.ResolveInfo
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
@@ -42,12 +41,13 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,8 +61,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import com.highcapable.yukihookapi.YukiHookAPI
@@ -71,10 +69,10 @@ import io.github.chimio.inxlocker.R
 import io.github.chimio.inxlocker.ui.activity.ui.theme.InxLockerTheme
 import io.github.chimio.inxlocker.ui.widget.SettingsGroup
 import io.github.chimio.inxlocker.ui.widget.SettingsItem
-import io.github.chimio.inxlocker.ui.widget.SwitchGroup
-import io.github.chimio.inxlocker.ui.widget.SwitchItem
+import io.github.chimio.inxlocker.ui.widget.SettingsItemRow
 import io.github.chimio.inxlocker.ui.widget.SettingsSwitchRow
-import io.github.chimio.inxlocker.util.Broadcasts
+import io.github.chimio.inxlocker.ui.widget.SwitchItem
+import io.github.chimio.inxlocker.ui.theme.Dimensions
 
 data class InstallerApp(
     val resolveInfo: ResolveInfo,
@@ -84,6 +82,13 @@ data class InstallerApp(
 )
 
 class MainActivity : ComponentActivity() {
+
+    private companion object {
+        private const val PREFS_NAME = "selected_installer_package"
+        private const val KEY_FORCED_INSTALLER_COMPONENTS = "forced_installer_components"
+        private const val KEY_FOLLOW_UNINSTALL_WITH_INSTALLER = "follow_uninstall_with_installer"
+        private const val KEY_SELECTED_UNINSTALLER_PACKAGE = "selected_uninstaller_package"
+    }
 
     private fun getApkInstallerApps(): List<InstallerApp> {
         return try {
@@ -115,26 +120,40 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun saveSelectedInstaller(packageName: String) {
-        prefs("selected_installer_package").edit {
+        prefs(PREFS_NAME).edit {
             putString("selected_installer_package", packageName)
         }
-        sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
     }
 
     private fun getSavedInstallerPackage(): String? {
         return try {
-            prefs("selected_installer_package").getString("selected_installer_package")
+            prefs(PREFS_NAME).getString("selected_installer_package")
         } catch (_: Exception) {
             null
         }
     }
 
     private fun clearSelectedInstaller() {
-        prefs("selected_installer_package").edit {
+        prefs(PREFS_NAME).edit {
             remove("selected_installer_package")
-
         }
-        sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
+    }
+
+    private fun getForcedInstallerComponents(): Set<String> {
+        return try {
+            prefs(PREFS_NAME).getStringSet(KEY_FORCED_INSTALLER_COMPONENTS, emptySet())
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
+
+    private fun saveForcedInstallerComponents(values: Set<String>) {
+        try {
+            prefs(PREFS_NAME).edit {
+                putStringSet(KEY_FORCED_INSTALLER_COMPONENTS, values)
+            }
+        } catch (_: Exception) {
+        }
     }
 
     private fun setLauncherIconVisible(isVisible: Boolean) {
@@ -151,8 +170,6 @@ class MainActivity : ComponentActivity() {
             putBoolean("hide_launcher_icon", hide)
         }
         setLauncherIconVisible(!hide)
-        sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
-
     }
 
     private fun getHideIconState(): Boolean {
@@ -165,17 +182,16 @@ class MainActivity : ComponentActivity() {
 
     private fun saveDebugLogEnabled(enabled: Boolean) {
         try {
-            prefs("selected_installer_package").edit {
+            prefs(PREFS_NAME).edit {
                 putBoolean("enable_debug_log", enabled)
             }
-            sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
         } catch (_: Exception) {
         }
     }
 
     private fun getDebugLogEnabled(): Boolean {
         return try {
-            prefs("selected_installer_package").getBoolean("enable_debug_log", true)
+            prefs(PREFS_NAME).getBoolean("enable_debug_log", true)
         } catch (_: Exception) {
             true
         }
@@ -183,35 +199,100 @@ class MainActivity : ComponentActivity() {
 
     private fun saveInterceptUninstallEnabled(enabled: Boolean) {
         try {
-            prefs("selected_installer_package").edit {
+            prefs(PREFS_NAME).edit {
                 putBoolean("intercept_uninstall", enabled)
             }
-            sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
         } catch (_: Exception) {
         }
     }
 
     private fun getInterceptUninstallEnabled(): Boolean {
         return try {
-            prefs("selected_installer_package").getBoolean("intercept_uninstall", false)
+            prefs(PREFS_NAME).getBoolean("intercept_uninstall", false)
         } catch (_: Exception) {
             false
         }
     }
 
+    private fun saveFollowUninstallWithInstaller(enabled: Boolean) {
+        try {
+            prefs(PREFS_NAME).edit {
+                putBoolean(KEY_FOLLOW_UNINSTALL_WITH_INSTALLER, enabled)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun getFollowUninstallWithInstaller(): Boolean {
+        return try {
+            prefs(PREFS_NAME).getBoolean(KEY_FOLLOW_UNINSTALL_WITH_INSTALLER, true)
+        } catch (_: Exception) {
+            true
+        }
+    }
+
+    private fun saveSelectedUninstallerPackage(packageName: String) {
+        try {
+            prefs(PREFS_NAME).edit {
+                putString(KEY_SELECTED_UNINSTALLER_PACKAGE, packageName)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun clearSelectedUninstallerPackage() {
+        try {
+            prefs(PREFS_NAME).edit {
+                remove(KEY_SELECTED_UNINSTALLER_PACKAGE)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun getSelectedUninstallerPackage(): String? {
+        return try {
+            prefs(PREFS_NAME).getString(KEY_SELECTED_UNINSTALLER_PACKAGE)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun getUninstallerApps(): List<InstallerApp> {
+        return try {
+            val dummyPackageUri = "package:meow".toUri()
+            val intent = Intent(Intent.ACTION_DELETE).apply {
+                data = dummyPackageUri
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val resolveInfos = packageManager.queryIntentActivities(
+                intent,
+                PackageManager.MATCH_ALL or PackageManager.MATCH_DEFAULT_ONLY
+            )
+            resolveInfos.filter { it.activityInfo.exported }.map { resolveInfo ->
+                InstallerApp(
+                    resolveInfo = resolveInfo,
+                    label = resolveInfo.loadLabel(packageManager).toString(),
+                    packageName = resolveInfo.activityInfo.packageName,
+                    icon = resolveInfo.loadIcon(packageManager)
+                )
+            }.distinctBy { it.packageName }.sortedBy { it.label }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     private fun saveInterceptSessionInstallEnabled(enabled: Boolean) {
         try {
-            prefs("selected_installer_package").edit {
+            prefs(PREFS_NAME).edit {
                 putBoolean("intercept_session_install", enabled)
             }
-            sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
         } catch (_: Exception) {
         }
     }
 
     private fun getInterceptSessionInstallEnabled(): Boolean {
         return try {
-            prefs("selected_installer_package").getBoolean("intercept_session_install", false)
+            prefs(PREFS_NAME).getBoolean("intercept_session_install", false)
         } catch (_: Exception) {
             false
         }
@@ -219,17 +300,16 @@ class MainActivity : ComponentActivity() {
 
     private fun saveFixPermissionsEnabled(enabled: Boolean) {
         try {
-            prefs("selected_installer_package").edit {
+            prefs(PREFS_NAME).edit {
                 putBoolean("fix_permissions", enabled)
             }
-            sendBroadcast(Intent(Broadcasts.ACTION_PREFS_UPDATED))
         } catch (_: Exception) {
         }
     }
 
     private fun getFixPermissionsEnabled(): Boolean {
         return try {
-            prefs("selected_installer_package").getBoolean("fix_permissions", false)
+            prefs(PREFS_NAME).getBoolean("fix_permissions", false)
         } catch (_: Exception) {
             false
         }
@@ -247,19 +327,31 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun MainScreen() {
-        val context = this@MainActivity
         var showInstallerDialog by remember { mutableStateOf(false) }
+        var showUninstallerDialog by remember { mutableStateOf(false) }
         val installerList = remember { getApkInstallerApps() }
+        val uninstallerList = remember { getUninstallerApps() }
         var selectedPackage by remember {
             mutableStateOf(getSavedInstallerPackage())
         }
+        var forcedComponents by remember { mutableStateOf(getForcedInstallerComponents()) }
+
+        var followUninstallWithInstaller by remember {
+            mutableStateOf(
+                getFollowUninstallWithInstaller()
+            )
+        }
+        var selectedUninstallerPackage by remember { mutableStateOf(getSelectedUninstallerPackage()) }
+
         var hideIcon by remember { mutableStateOf(getHideIconState()) }
         var debugLogEnabled by remember { mutableStateOf(getDebugLogEnabled()) }
         var interceptUninstallEnabled by remember { mutableStateOf(getInterceptUninstallEnabled()) }
-        var interceptSessionInstallEnabled by remember { mutableStateOf(getInterceptSessionInstallEnabled()) }
+        var interceptSessionInstallEnabled by remember {
+            mutableStateOf(
+                getInterceptSessionInstallEnabled()
+            )
+        }
         var fixPermissionsEnabled by remember { mutableStateOf(getFixPermissionsEnabled()) }
-
-        val selectedInstaller = installerList.find { it.packageName == selectedPackage }
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -281,11 +373,11 @@ class MainActivity : ComponentActivity() {
                         title = stringResource(R.string.installer_settings_title),
                         items = listOf(
                             SettingsItem(
-                                icon = if (selectedInstaller == null) Icons.Default.Build else null,
-                                drawableIcon = selectedInstaller?.icon,
-                                title = selectedInstaller?.label
+                                icon = if (selectedPackage == null) Icons.Default.Build else null,
+                                drawableIcon = installerList.find { it.packageName == selectedPackage }?.icon,
+                                title = installerList.find { it.packageName == selectedPackage }?.label
                                     ?: stringResource(R.string.installer_system_default),
-                                subtitle = selectedInstaller?.packageName
+                                subtitle = installerList.find { it.packageName == selectedPackage }?.packageName
                                     ?: stringResource(R.string.installer_system_default_desc),
                                 onClick = { showInstallerDialog = true }
                             )
@@ -294,11 +386,25 @@ class MainActivity : ComponentActivity() {
                 }
 
                 item {
-                    SwitchGroup(
-                        title = stringResource(R.string.settings),
-                        items = buildList {
-                            add(
-                                SwitchItem(
+                    Text(
+                        text = stringResource(R.string.settings),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Dimensions.SpaceXS, bottom = Dimensions.SpaceM)
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column {
+                            SettingsSwitchRow(
+                                item = SwitchItem(
                                     icon = Icons.Default.Info,
                                     title = stringResource(R.string.hide_icon_title),
                                     subtitle = stringResource(R.string.hide_icon_desc),
@@ -306,18 +412,13 @@ class MainActivity : ComponentActivity() {
                                     onCheckedChange = { newState ->
                                         hideIcon = newState
                                         saveHideIconState(newState)
-                                        Toast.makeText(
-                                            context,
-                                            if (newState) context.getString(R.string.hide_icon_enabled_toast) else context.getString(
-                                                R.string.hide_icon_disabled_toast
-                                            ),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
                                     }
-                                )
+                                ),
+                                showDivider = true
                             )
-                            add(
-                                SwitchItem(
+
+                            SettingsSwitchRow(
+                                item = SwitchItem(
                                     icon = Icons.Default.DateRange,
                                     title = stringResource(R.string.debug_log_title),
                                     subtitle = stringResource(R.string.debug_log_desc),
@@ -325,18 +426,13 @@ class MainActivity : ComponentActivity() {
                                     onCheckedChange = { newState ->
                                         debugLogEnabled = newState
                                         saveDebugLogEnabled(newState)
-                                        Toast.makeText(
-                                            context,
-                                            if (newState) context.getString(R.string.debug_log_enabled_toast) else context.getString(
-                                                R.string.debug_log_disabled_toast
-                                            ),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
                                     }
-                                )
+                                ),
+                                showDivider = true
                             )
-                            add(
-                                SwitchItem(
+
+                            SettingsSwitchRow(
+                                item = SwitchItem(
                                     icon = Icons.Default.Delete,
                                     title = stringResource(R.string.intercept_uninstall_title),
                                     subtitle = stringResource(R.string.intercept_uninstall_desc),
@@ -344,18 +440,55 @@ class MainActivity : ComponentActivity() {
                                     onCheckedChange = { newState ->
                                         interceptUninstallEnabled = newState
                                         saveInterceptUninstallEnabled(newState)
-                                        Toast.makeText(
-                                            context,
-                                            if (newState) context.getString(R.string.intercept_uninstall_enabled_toast) else context.getString(
-                                                R.string.intercept_uninstall_disabled_toast
-                                            ),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
                                     }
-                                )
+                                ),
+                                showDivider = interceptUninstallEnabled
                             )
+
+                            AnimatedVisibility(
+                                visible = interceptUninstallEnabled,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                Column {
+                                    SettingsSwitchRow(
+                                        item = SwitchItem(
+                                            icon = Icons.Default.Build,
+                                            title = stringResource(R.string.uninstall_follow_installer_title),
+                                            subtitle = stringResource(R.string.uninstall_follow_installer_desc),
+                                            isChecked = followUninstallWithInstaller,
+                                            onCheckedChange = { newState ->
+                                                followUninstallWithInstaller = newState
+                                                saveFollowUninstallWithInstaller(newState)
+                                            }
+                                        ),
+                                        showDivider = !followUninstallWithInstaller
+                                    )
+
+                                    AnimatedVisibility(
+                                        visible = !followUninstallWithInstaller,
+                                        enter = fadeIn() + expandVertically(),
+                                        exit = fadeOut() + shrinkVertically()
+                                    ) {
+                                        val selectedUninstaller = uninstallerList
+                                            .find { it.packageName == selectedUninstallerPackage }
+                                        SettingsItemRow(
+                                            item = SettingsItem(
+                                                icon = if (selectedUninstaller == null) Icons.Default.Delete else null,
+                                                drawableIcon = selectedUninstaller?.icon,
+                                                title = selectedUninstaller?.label
+                                                    ?: stringResource(R.string.uninstall_default_uninstaller_title),
+                                                subtitle = selectedUninstaller?.packageName
+                                                    ?: stringResource(R.string.uninstall_default_uninstaller_subtitle_default),
+                                                onClick = { showUninstallerDialog = true }
+                                            ),
+                                            showDivider = false
+                                        )
+                                    }
+                                }
+                            }
                         }
-                    )
+                    }
                 }
 
                 item {
@@ -381,13 +514,6 @@ class MainActivity : ComponentActivity() {
                                             fixPermissionsEnabled = false
                                             saveFixPermissionsEnabled(false)
                                         }
-                                        Toast.makeText(
-                                            context,
-                                            if (newState) context.getString(R.string.intercept_session_install_enabled_toast) else context.getString(
-                                                R.string.intercept_session_install_disabled_toast
-                                            ),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
                                     }
                                 ),
                                 showDivider = Build.VERSION.SDK_INT >= 34 && interceptSessionInstallEnabled
@@ -407,13 +533,6 @@ class MainActivity : ComponentActivity() {
                                         onCheckedChange = { newState ->
                                             fixPermissionsEnabled = newState
                                             saveFixPermissionsEnabled(newState)
-                                            Toast.makeText(
-                                                context,
-                                                if (newState) context.getString(R.string.fix_permissions_enabled_toast) else context.getString(
-                                                    R.string.fix_permissions_disabled_toast
-                                                ),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
                                         }
                                     ),
                                     showDivider = false
@@ -433,166 +552,155 @@ class MainActivity : ComponentActivity() {
             InstallerSelectionDialog(
                 installerList = installerList,
                 selectedPackage = selectedPackage,
+                forcedComponents = forcedComponents,
                 onDismiss = { showInstallerDialog = false },
                 onInstallerSelected = { packageName ->
-                    selectedPackage = packageName
                     saveSelectedInstaller(packageName)
+                    selectedPackage = packageName
                     showInstallerDialog = false
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.installer_saved),
-                        Toast.LENGTH_SHORT
-                    ).show()
                 },
                 onClearSelection = {
-                    selectedPackage = null
                     clearSelectedInstaller()
+                    selectedPackage = null
                     showInstallerDialog = false
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.installer_restored),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                },
+                onToggleForceComponent = { packageName, className ->
+                    val key = "$packageName/$className"
+                    val newSet = forcedComponents.toMutableSet().apply {
+                        if (!add(key)) remove(key)
+                    }.toSet()
+                    forcedComponents = newSet
+                    saveForcedInstallerComponents(newSet)
+                }
+            )
+        }
+
+        if (showUninstallerDialog) {
+            UninstallerSelectionDialog(
+                uninstallerList = uninstallerList,
+                selectedPackage = selectedUninstallerPackage,
+                onDismiss = { showUninstallerDialog = false },
+                onUninstallerSelected = { packageName ->
+                    saveSelectedUninstallerPackage(packageName)
+                    selectedUninstallerPackage = packageName
+                    showUninstallerDialog = false
+                },
+                onClearSelection = {
+                    clearSelectedUninstallerPackage()
+                    selectedUninstallerPackage = null
+                    showUninstallerDialog = false
                 }
             )
         }
     }
 
     @Composable
-    private fun ModuleStatusCard() {
-        val isActive = YukiHookAPI.Status.isModuleActive
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(
-                containerColor = if (isActive) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.errorContainer
-                }
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    @OptIn(ExperimentalMaterial3Api::class)
+    private fun UninstallerSelectionDialog(
+        uninstallerList: List<InstallerApp>,
+        selectedPackage: String?,
+        onDismiss: () -> Unit,
+        onUninstallerSelected: (String) -> Unit,
+        onClearSelection: () -> Unit
+    ) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = sheetState
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxHeight(0.85f)
             ) {
-                Icon(
-                    imageVector = if (isActive) Icons.Default.CheckCircle else Icons.Default.Warning,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = if (isActive) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    }
-                )
 
-                Column {
-                    Text(
-                        text = if (isActive) stringResource(R.string.module_status_active) else stringResource(
-                            R.string.module_status_inactive
-                        ),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onErrorContainer
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        InstallerItem(
+                            icon = null,
+                            label = stringResource(R.string.uninstall_default_uninstaller_system_label),
+                            packageName = stringResource(R.string.uninstall_default_uninstaller_system_desc),
+                            isSelected = selectedPackage == null,
+                            isForced = false,
+                            onClick = onClearSelection
+                        )
+                    }
+
+                    if (uninstallerList.isNotEmpty()) {
+                        itemsIndexed(uninstallerList) { _, app ->
+                            InstallerItem(
+                                icon = app.icon,
+                                label = app.label,
+                                packageName = app.packageName,
+                                isSelected = selectedPackage == app.packageName,
+                                isForced = false,
+                                onClick = { onUninstallerSelected(app.packageName) }
+                            )
                         }
-                    )
-                    Text(
-                        text = if (isActive) {
-                            stringResource(R.string.module_status_active_desc)
-                        } else {
-                            stringResource(R.string.module_status_inactive_desc)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        } else {
-                            MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
-                        }
-                    )
+                    }
                 }
             }
         }
     }
 
     @Composable
+    @OptIn(ExperimentalMaterial3Api::class)
     private fun InstallerSelectionDialog(
         installerList: List<InstallerApp>,
         selectedPackage: String?,
+        forcedComponents: Set<String>,
         onDismiss: () -> Unit,
         onInstallerSelected: (String) -> Unit,
-        onClearSelection: () -> Unit
+        onClearSelection: () -> Unit,
+        onToggleForceComponent: (packageName: String, className: String) -> Unit
     ) {
-        Dialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
             onDismissRequest = onDismiss,
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            sheetState = sheetState
         ) {
-            Card(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .fillMaxHeight(0.7f),
-                shape = MaterialTheme.shapes.medium,
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)  // 去掉阴影
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
             ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.installer_selection_dialog_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        InstallerItem(
+                            icon = null,
+                            label = stringResource(R.string.installer_system_default),
+                            packageName = stringResource(R.string.installer_system_default_desc),
+                            isSelected = selectedPackage == null,
+                            isForced = false,
+                            onClick = onClearSelection
                         )
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = stringResource(R.string.close)
-                            )
-                        }
                     }
 
-                    HorizontalDivider()
-
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
+                    if (installerList.isNotEmpty()) {
+                        itemsIndexed(installerList) { _, installer ->
+                            val className = installer.resolveInfo.activityInfo.name
+                            val forceKey = "${installer.packageName}/$className"
+                            val isForced = forcedComponents.contains(forceKey)
                             InstallerItem(
-                                icon = null,
-                                label = stringResource(R.string.installer_system_default),
-                                packageName = stringResource(R.string.installer_system_default_desc),
-                                isSelected = selectedPackage == null,
-                                onClick = onClearSelection
+                                icon = installer.icon,
+                                label = installer.label,
+                                packageName = if (isForced) "${installer.packageName}\n$className" else installer.packageName,
+                                isSelected = selectedPackage == installer.packageName,
+                                isForced = isForced,
+                                onClick = { onInstallerSelected(installer.packageName) },
+                                onLongClick = {
+                                    onToggleForceComponent(installer.packageName, className)
+                                }
                             )
-                        }
-
-                        if (installerList.isNotEmpty()) {
-                            itemsIndexed(installerList) { _, installer ->
-                                InstallerItem(
-                                    icon = installer.icon,
-                                    label = installer.label,
-                                    packageName = installer.packageName,
-                                    isSelected = selectedPackage == installer.packageName,
-                                    onClick = { onInstallerSelected(installer.packageName) }
-                                )
-                            }
                         }
                     }
                 }
@@ -606,7 +714,9 @@ class MainActivity : ComponentActivity() {
         label: String,
         packageName: String,
         isSelected: Boolean,
-        onClick: () -> Unit
+        isForced: Boolean,
+        onClick: () -> Unit,
+        onLongClick: (() -> Unit)? = null
     ) {
         Card(
             modifier = Modifier
@@ -624,17 +734,19 @@ class MainActivity : ComponentActivity() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onClick() }
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = { onLongClick?.invoke() }
+                    )
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (icon != null) {
-                    val d = icon
-                    val w = if (d.intrinsicWidth > 0) d.intrinsicWidth else 128
-                    val h = if (d.intrinsicHeight > 0) d.intrinsicHeight else 128
+                    val w = if (icon.intrinsicWidth > 0) icon.intrinsicWidth else 128
+                    val h = if (icon.intrinsicHeight > 0) icon.intrinsicHeight else 128
                     Image(
-                        bitmap = d.toBitmap(w, h).asImageBitmap(),
+                        bitmap = icon.toBitmap(w, h).asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         contentScale = ContentScale.Fit
@@ -671,12 +783,71 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+                if (isForced) {
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = stringResource(R.string.selected),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun ModuleStatusCard() {
+        val isActive = runCatching { YukiHookAPI.Status.isXposedModuleActive }.getOrDefault(false)
+        val containerColor =
+            if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = if (isActive) Icons.Default.Info else Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isActive) {
+                            stringResource(R.string.module_status_active)
+                        } else {
+                            stringResource(R.string.module_status_inactive)
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (isActive) {
+                            stringResource(R.string.module_status_active_desc)
+                        } else {
+                            stringResource(R.string.module_status_inactive_desc)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
