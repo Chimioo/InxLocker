@@ -4,13 +4,16 @@ import android.content.Intent
 import com.highcapable.yukihookapi.hook.log.YLog
 
 object IntentAnalyzer {
+    private const val TAG = "IntentAnalyzer"
+    private const val INTENT_ACTION_CONFIRM_INSTALL = "android.content.pm.action.CONFIRM_INSTALL"
+    private const val INTENT_ACTION_CONFIRM_PERMISSIONS = "android.content.pm.action.CONFIRM_PERMISSIONS"
 
     sealed class Result {
         object ShouldRedirect : Result()
         object ShouldNotRedirect : Result()
     }
+
     fun analyze(intent: Intent): Result = runCatching {
-        val TAG = "IntentAnalyzer"
         val original = IntentSnapshot.capture(intent)
 
         YLog.d(TAG, "Intent action: ${original.action}")
@@ -42,14 +45,16 @@ object IntentAnalyzer {
                         Result.ShouldNotRedirect
                     }
                 }
-                "android.content.pm.action.CONFIRM_INSTALL",
-                "android.content.pm.action.CONFIRM_PERMISSIONS" -> {
+
+                INTENT_ACTION_CONFIRM_INSTALL,
+                INTENT_ACTION_CONFIRM_PERMISSIONS -> {
                     if (PrefsProvider.getBoolean("intercept_session_install", false)) {
                         Result.ShouldRedirect
                     } else {
                         Result.ShouldNotRedirect
                     }
                 }
+
                 else -> Result.ShouldRedirect
             }
         } ?: Result.ShouldNotRedirect
@@ -69,8 +74,8 @@ object IntentAnalyzer {
     private fun hasValidAction(intent: Intent): Boolean {
         return intent.action in listOf(
             Intent.ACTION_INSTALL_PACKAGE,
-            "android.content.pm.action.CONFIRM_INSTALL",
-            "android.content.pm.action.CONFIRM_PERMISSIONS",
+            INTENT_ACTION_CONFIRM_INSTALL,
+            INTENT_ACTION_CONFIRM_PERMISSIONS,
             Intent.ACTION_UNINSTALL_PACKAGE,
             Intent.ACTION_DELETE
         )
@@ -100,8 +105,8 @@ object IntentAnalyzer {
     private val allowedActions = listOf(
         Intent.ACTION_VIEW,
         Intent.ACTION_INSTALL_PACKAGE,
-        "android.content.pm.action.CONFIRM_INSTALL",
-        "android.content.pm.action.CONFIRM_PERMISSIONS",
+        INTENT_ACTION_CONFIRM_INSTALL,
+        INTENT_ACTION_CONFIRM_PERMISSIONS,
         Intent.ACTION_UNINSTALL_PACKAGE,
         Intent.ACTION_DELETE
     )

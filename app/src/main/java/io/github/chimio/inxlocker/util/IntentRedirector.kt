@@ -59,19 +59,31 @@ object IntentRedirector {
     }
 
     private fun applyRedirection(intent: Intent) {
+        val isUninstall = intent.action == ACTION_DELETE || intent.action == ACTION_UNINSTALL_PACKAGE
         val targetPackage = getTargetPackageForIntent(intent)
+
         if (!targetPackage.isNullOrBlank()) {
-            val forcedComponent = getForcedComponentForPackage(targetPackage)
-            if (forcedComponent != null) {
-                intent.component = forcedComponent
-                intent.`package` = null
-            } else {
+            if (isUninstall) {
+                // Clear component and only set the target package for uninstall scenarios
+                // The target app will handle the ACTION_DELETE routing automatically
                 intent.component = null
                 intent.setPackage(targetPackage)
+            } else {
+                // For installation, check if a specific component is forced by the user
+                val forcedComponent = getForcedComponentForPackage(targetPackage)
+                if (forcedComponent != null) {
+                    intent.component = forcedComponent
+                    intent.`package` = null
+                } else {
+                    intent.component = null
+                    intent.setPackage(targetPackage)
+                }
             }
+            // Add necessary flags for redirection
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_GRANT_READ_URI_PERMISSION)
         } else {
-            if (intent.action == ACTION_DELETE || intent.action == ACTION_UNINSTALL_PACKAGE) {
+            // If no specific target package is set, ensure system default handles it cleanly
+            if (isUninstall) {
                 intent.component = null
                 intent.`package` = null
             }
