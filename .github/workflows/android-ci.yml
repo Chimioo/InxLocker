@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - main
-    paths: 
-      - 'app/**'
+    paths:
+      - "app/**"
   pull_request:
     branches: ["**"]
     paths:
-      - 'app/**'
+      - "app/**"
 
 jobs:
   build:
@@ -18,12 +18,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: gradle
 
       - name: Setup Android SDK
