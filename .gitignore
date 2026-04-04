@@ -35,3 +35,5 @@ google-services.json
 
 # Ignore other unnecessary files and folders
 .DS_Store
+
+.vscode/

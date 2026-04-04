@@ -1,5 +1,18 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+fun gitCommitCountOrNull(): Int? {
+    return try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+            .redirectErrorStream(true)
+            .start()
+        val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+        val exit = process.waitFor()
+        if (exit == 0) output.toIntOrNull() else null
+    } catch (_: Throwable) {
+        null
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,8 +28,8 @@ android {
         applicationId = "io.github.chimio.inxlocker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.4"
+        versionCode = gitCommitCountOrNull() ?: 12
+        versionName = "1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
