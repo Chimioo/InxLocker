@@ -16,7 +16,7 @@ object PrefsProvider {
         }
     }
 
-    private fun reload() {
+    public fun reload() {
         try {
             sharedPrefs.reload()
         } catch (e: Throwable) {

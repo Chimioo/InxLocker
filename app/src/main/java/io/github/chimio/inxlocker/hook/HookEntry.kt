@@ -36,16 +36,10 @@ class HookEntry : IYukiHookXposedInit {
     override fun onHook() = encase {
         loadApp {
             if (packageName == "android") return@loadApp
-            appContext?.let {
-                runCatching { PrefsProvider.registerPrefsChangedReceiver(it) }
-            }
             hookContextStartActivity()
         }
 
         loadSystem {
-            appContext?.let {
-                runCatching { PrefsProvider.registerPrefsChangedReceiver(it) }
-            }
             hookActivityStarterExecute()
             hookPackageInstallerSession()
         }
