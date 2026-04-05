@@ -124,7 +124,6 @@ class MainActivity : ComponentActivity() {
         prefs(PREFS_NAME).edit {
             putString("selected_installer_package", packageName)
         }
-        PrefsProvider.notifyPrefsChanged(this)
     }
 
     private fun getSavedInstallerPackage(): String? {
@@ -139,7 +138,6 @@ class MainActivity : ComponentActivity() {
         prefs(PREFS_NAME).edit {
             remove("selected_installer_package")
         }
-        PrefsProvider.notifyPrefsChanged(this)
     }
 
     private fun getForcedInstallerComponents(): Set<String> {
@@ -157,7 +155,6 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
     }
 
     private fun setLauncherIconVisible(isVisible: Boolean) {
@@ -191,7 +188,7 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
+     
     }
 
     private fun getDebugLogEnabled(): Boolean {
@@ -209,7 +206,7 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
+       
     }
 
     private fun getInterceptUninstallEnabled(): Boolean {
@@ -227,7 +224,7 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
+      
     }
 
     private fun getFollowUninstallWithInstaller(): Boolean {
@@ -245,7 +242,7 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
+       
     }
 
     private fun clearSelectedUninstallerPackage() {
@@ -255,7 +252,6 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
     }
 
     private fun getSelectedUninstallerPackage(): String? {
@@ -297,7 +293,7 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
+    
     }
 
     private fun getInterceptSessionInstallEnabled(): Boolean {
@@ -315,7 +311,7 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
-        PrefsProvider.notifyPrefsChanged(this)
+     
     }
 
     private fun getFixPermissionsEnabled(): Boolean {

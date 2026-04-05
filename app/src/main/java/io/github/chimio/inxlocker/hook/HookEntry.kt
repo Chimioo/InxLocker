@@ -29,7 +29,6 @@ class HookEntry : IYukiHookXposedInit {
         debugLog {
             tag = "InxLocker"
             PrefsProvider.reload()
-            PrefsProvider.startWatchIfPossible()
             isEnable = PrefsProvider.getBoolean("enable_debug_log", true)
         }
     }
@@ -37,7 +36,6 @@ class HookEntry : IYukiHookXposedInit {
     override fun onHook() = encase {
         loadApp {
             if (packageName == "android") return@loadApp
-            PrefsProvider.startWatchIfPossible()
             appContext?.let {
                 runCatching { PrefsProvider.registerPrefsChangedReceiver(it) }
             }
@@ -45,7 +43,6 @@ class HookEntry : IYukiHookXposedInit {
         }
 
         loadSystem {
-            PrefsProvider.startWatchIfPossible()
             appContext?.let {
                 runCatching { PrefsProvider.registerPrefsChangedReceiver(it) }
             }
