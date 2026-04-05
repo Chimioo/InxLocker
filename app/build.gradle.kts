@@ -15,7 +15,6 @@ fun gitCommitCountOrNull(): Int? {
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp") version "2.2.0-2.0.2"
     alias(libs.plugins.kotlin.compose)
 }
@@ -57,18 +56,10 @@ android {
         compose = true
         buildConfig = true
     }
+}
 
-    applicationVariants.all {
-        outputs.all {
-            val appName = "InxLocker"
-            val versionName = defaultConfig.versionName
-            val versionCode = defaultConfig.versionCode
-            val outputFileName = "${appName}_${versionName}(${versionCode}).apk"
-            if (this is com.android.build.gradle.internal.api.BaseVariantOutputImpl) {
-                this.outputFileName = outputFileName
-            }
-        }
-    }
+base {
+    archivesName.set("InxLocker_${android.defaultConfig.versionName}(${android.defaultConfig.versionCode})")
 }
 
 dependencies {
@@ -100,4 +91,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     // 作为 Xposed 模块使用务必添加，其它情况可选
     ksp(libs.ksp.xposed)
+
+    implementation(libs.androidx.compose.material.icons.core)
 }

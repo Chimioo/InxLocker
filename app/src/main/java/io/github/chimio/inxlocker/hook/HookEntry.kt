@@ -38,10 +38,17 @@ class HookEntry : IYukiHookXposedInit {
         loadApp {
             if (packageName == "android") return@loadApp
             PrefsProvider.startWatchIfPossible()
+            appContext?.let {
+                runCatching { PrefsProvider.registerPrefsChangedReceiver(it) }
+            }
             hookContextStartActivity()
         }
+
         loadSystem {
             PrefsProvider.startWatchIfPossible()
+            appContext?.let {
+                runCatching { PrefsProvider.registerPrefsChangedReceiver(it) }
+            }
             hookActivityStarterExecute()
             hookPackageInstallerSession()
         }
@@ -170,12 +177,19 @@ class HookEntry : IYukiHookXposedInit {
                             val intentIndex = args.indexOfFirst { it is Intent }
                             if (intentIndex != -1) {
                                 val intent = args(intentIndex).cast<Intent>()
-                                handleIntentIfNeeded(intent, "ActivityStarter.startActivityMayWait"){
+                                handleIntentIfNeeded(
+                                    intent,
+                                    "ActivityStarter.startActivityMayWait"
+                                ) {
                                     args(intentIndex).set(intent)
                                 }
                             }
                         } catch (e: Exception) {
-                            YLog.e(TAG, "ActivityStarter.startActivityMayWait Hook 错误: ${e.message}", e)
+                            YLog.e(
+                                TAG,
+                                "ActivityStarter.startActivityMayWait Hook 错误: ${e.message}",
+                                e
+                            )
                         }
                     }
                 }
@@ -208,21 +222,27 @@ class HookEntry : IYukiHookXposedInit {
                                 val infoClass = info.javaClass
                                 // 检查 resolvedBaseCodePath 是否为空
                                 val currentPath = runCatching {
-                                    infoClass.getDeclaredField("resolvedBaseCodePath").apply { isAccessible = true }
+                                    infoClass.getDeclaredField("resolvedBaseCodePath")
+                                        .apply { isAccessible = true }
                                         .get(info) as? String
                                 }.getOrNull().orEmpty()
                                 if (currentPath.isEmpty()) {
                                     // 显式使用 instanceClass (即 PackageInstallerSession.class) 来调用 field
                                     val mResolvedBaseFile = runCatching {
-                                        instanceClass?.getDeclaredField("mResolvedBaseFile")?.apply { isAccessible = true }
+                                        instanceClass?.getDeclaredField("mResolvedBaseFile")
+                                            ?.apply { isAccessible = true }
                                             ?.get(instance) as? java.io.File
                                     }.getOrNull()
                                     if (mResolvedBaseFile != null) {
                                         runCatching {
-                                            infoClass.getDeclaredField("resolvedBaseCodePath").apply { isAccessible = true }
+                                            infoClass.getDeclaredField("resolvedBaseCodePath")
+                                                .apply { isAccessible = true }
                                                 .set(info, mResolvedBaseFile.absolutePath)
                                         }
-                                        YLog.i(TAG, "权限绕过可能失败，已手动补全路径: ${mResolvedBaseFile.absolutePath}")
+                                        YLog.i(
+                                            TAG,
+                                            "权限绕过可能失败，已手动补全路径: ${mResolvedBaseFile.absolutePath}"
+                                        )
                                     }
                                 }
                             }

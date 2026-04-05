@@ -1,33 +1,35 @@
 package io.github.chimio.inxlocker.util
 
+import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
-import android.os.FileObserver
-import android.os.FileObserver.CLOSE_WRITE
-import android.os.FileObserver.CREATE
-import android.os.FileObserver.MODIFY
-import android.os.FileObserver.MOVED_TO
 import android.os.Handler
 import android.os.HandlerThread
 import com.highcapable.yukihookapi.hook.log.YLog
 import de.robv.android.xposed.XSharedPreferences
-import io.github.chimio.inxlocker.BuildConfig
-import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 object PrefsProvider {
     private const val PREFS_FILE_NAME = "selected_installer_package"
+    private const val ACTION_PREFS_CHANGED = "io.github.chimio.inxlocker.action.PREFS_CHANGED"
 
     private val watchStarted = AtomicBoolean(false)
-    @Volatile private var fileObserver: FileObserver? = null
-    @Volatile private var reloadHandler: Handler? = null
-    @Volatile private var pendingReload = false
+    @Volatile
+    private var reloadHandler: Handler? = null
+    @Volatile
+    private var pendingReload = false
+    @Volatile
+    private var receiver: BroadcastReceiver? = null
 
     private val sharedPrefs: XSharedPreferences by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        XSharedPreferences(BuildConfig.APPLICATION_ID, PREFS_FILE_NAME).apply {
+        XSharedPreferences("io.github.chimio.inxlocker", PREFS_FILE_NAME).apply {
             try {
                 reload()
             } catch (e: Throwable) {
-                YLog.e("PrefsProvider", "重载失败$e")
+                YLog.e("PrefsProvider", "重载失败 $e")
             }
         }
     }
@@ -38,44 +40,46 @@ object PrefsProvider {
 
     fun startWatchIfPossible() {
         if (!watchStarted.compareAndSet(false, true)) return
+        val thread = HandlerThread("InxLocker-PrefsReload").apply { start() }
+        reloadHandler = Handler(thread.looper)
+    }
+
+    fun notifyPrefsChanged(context: Context) {
         try {
-            val prefsFile = resolvePrefsFile(sharedPrefs)
-            if (prefsFile == null) {
-                YLog.e("PrefsProvider", "FileObserver启动失败: 无法定位 prefs 文件")
-                return
+            val intent = Intent(ACTION_PREFS_CHANGED).apply {
+                `package` = context.packageName
+                addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             }
-            val parent = prefsFile.parentFile
-            if (parent == null) {
-                YLog.e("PrefsProvider", "FileObserver启动失败: prefs 父目录为空")
-                return
-            }
+            context.sendBroadcast(intent)
+        } catch (_: Throwable) {
+        }
+    }
 
-            val thread = HandlerThread("InxLocker-PrefsObserver").apply { start() }
-            val handler = Handler(thread.looper)
-            reloadHandler = handler
+    fun registerPrefsChangedReceiver(context: Application) {
+        if (receiver != null) return
 
-            val mask = CLOSE_WRITE or MOVED_TO or CREATE or MODIFY
-            fileObserver = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                object : FileObserver(parent, mask) {
-                    override fun onEvent(event: Int, path: String?) {
-                        if (path != prefsFile.name) return
-                        scheduleReload()
-                    }
+        try {
+            val r = object : BroadcastReceiver() {
+                override fun onReceive(ctx: Context?, intent: Intent?) {
+                    if (intent?.action != ACTION_PREFS_CHANGED) return
+                    scheduleReload()
                 }
+            }
+            receiver = r
+
+            val filter = IntentFilter(ACTION_PREFS_CHANGED).apply {
+                priority = Int.MAX_VALUE
+            }
+
+            val flags = if (Build.VERSION.SDK_INT >= 33) {
+                Context.RECEIVER_NOT_EXPORTED
             } else {
-                @Suppress("DEPRECATION")
-                object : FileObserver(parent.absolutePath, mask) {
-                    override fun onEvent(event: Int, path: String?) {
-                        if (path != prefsFile.name) return
-                        scheduleReload()
-                    }
-                }
-            }.also {
-                it.startWatching()
-                YLog.i("PrefsProvider", "FileObserver已启动: ${prefsFile.absolutePath}")
+                0
             }
+
+            context.registerReceiver(r, filter, flags)
         } catch (t: Throwable) {
-            YLog.e("PrefsProvider", "FileObserver启动异常: ${t.message}", t)
+            YLog.e("PrefsProvider", "注册配置更新广播失败: ${t.message}", t)
         }
     }
 
@@ -87,8 +91,10 @@ object PrefsProvider {
             }
             return
         }
+
         if (pendingReload) return
         pendingReload = true
+
         handler.postDelayed({
             pendingReload = false
             try {
@@ -98,15 +104,6 @@ object PrefsProvider {
                 YLog.e("PrefsProvider", "自动重载失败: ${t.message}", t)
             }
         }, 150)
-    }
-
-    private fun resolvePrefsFile(prefs: XSharedPreferences): File? {
-        return try {
-            val mFileField = XSharedPreferences::class.java.getDeclaredField("mFile").apply { isAccessible = true }
-            (mFileField.get(prefs) as? File)
-        } catch (_: Throwable) {
-            null
-        }
     }
 
     fun getString(key: String, defValue: String? = null): String? = try {
@@ -127,6 +124,3 @@ object PrefsProvider {
         defValue
     }
 }
-
-
-
