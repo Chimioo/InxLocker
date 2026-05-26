@@ -20,4 +20,6 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
+-keep class io.github.chimio.inxlocker.hook.HookEntry { *; }
+
 -dontwarn java.lang.reflect.AnnotatedType

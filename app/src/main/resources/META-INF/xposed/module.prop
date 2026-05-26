@@ -1,0 +1,3 @@
+minApiVersion=102
+targetApiVersion=102
+autoHotReload=true

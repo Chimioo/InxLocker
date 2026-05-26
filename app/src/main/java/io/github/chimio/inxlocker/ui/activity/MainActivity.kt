@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,15 +39,18 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,8 +67,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.hook.factory.prefs
+import io.github.chimio.inxlocker.util.HotReloadTrigger
+import io.github.chimio.inxlocker.util.PrefsProvider
+import io.github.chimio.inxlocker.util.XposedServiceHolder
 import io.github.chimio.inxlocker.R
 import io.github.chimio.inxlocker.ui.activity.ui.theme.InxLockerTheme
 import io.github.chimio.inxlocker.ui.widget.SettingsGroup
@@ -73,7 +78,6 @@ import io.github.chimio.inxlocker.ui.widget.SettingsItemRow
 import io.github.chimio.inxlocker.ui.widget.SettingsSwitchRow
 import io.github.chimio.inxlocker.ui.widget.SwitchItem
 import io.github.chimio.inxlocker.ui.theme.Dimensions
-import io.github.chimio.inxlocker.util.PrefsProvider
 
 data class InstallerApp(
     val resolveInfo: ResolveInfo,
@@ -121,40 +125,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun saveSelectedInstaller(packageName: String) {
-        prefs(PREFS_NAME).edit {
-            putString("selected_installer_package", packageName)
-        }
+        PrefsProvider.putString("selected_installer_package", packageName)
     }
 
     private fun getSavedInstallerPackage(): String? {
-        return try {
-            prefs(PREFS_NAME).getString("selected_installer_package")
-        } catch (_: Exception) {
-            null
-        }
+        return PrefsProvider.getString("selected_installer_package")
     }
 
     private fun clearSelectedInstaller() {
-        prefs(PREFS_NAME).edit {
-            remove("selected_installer_package")
-        }
+        PrefsProvider.remove("selected_installer_package")
     }
 
     private fun getForcedInstallerComponents(): Set<String> {
-        return try {
-            prefs(PREFS_NAME).getStringSet(KEY_FORCED_INSTALLER_COMPONENTS, emptySet())
-        } catch (_: Exception) {
-            emptySet()
-        }
+        return PrefsProvider.getStringSet(KEY_FORCED_INSTALLER_COMPONENTS)
     }
 
     private fun saveForcedInstallerComponents(values: Set<String>) {
-        try {
-            prefs(PREFS_NAME).edit {
-                putStringSet(KEY_FORCED_INSTALLER_COMPONENTS, values)
-            }
-        } catch (_: Exception) {
-        }
+        PrefsProvider.putStringSet(KEY_FORCED_INSTALLER_COMPONENTS, values)
     }
 
     private fun setLauncherIconVisible(isVisible: Boolean) {
@@ -167,99 +154,48 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun saveHideIconState(hide: Boolean) {
-        prefs().edit {
-            putBoolean("hide_launcher_icon", hide)
-        }
+        PrefsProvider.putBoolean("hide_launcher_icon", hide)
         setLauncherIconVisible(!hide)
     }
 
     private fun getHideIconState(): Boolean {
-        return try {
-            prefs().getBoolean("hide_launcher_icon", false)
-        } catch (_: Exception) {
-            false
-        }
+        return PrefsProvider.getBoolean("hide_launcher_icon", false)
     }
 
     private fun saveDebugLogEnabled(enabled: Boolean) {
-        try {
-            prefs(PREFS_NAME).edit {
-                putBoolean("enable_debug_log", enabled)
-            }
-        } catch (_: Exception) {
-        }
-     
+        PrefsProvider.putBoolean("enable_debug_log", enabled)
     }
 
     private fun getDebugLogEnabled(): Boolean {
-        return try {
-            prefs(PREFS_NAME).getBoolean("enable_debug_log", true)
-        } catch (_: Exception) {
-            true
-        }
+        return PrefsProvider.getBoolean("enable_debug_log", true)
     }
 
     private fun saveInterceptUninstallEnabled(enabled: Boolean) {
-        try {
-            prefs(PREFS_NAME).edit {
-                putBoolean("intercept_uninstall", enabled)
-            }
-        } catch (_: Exception) {
-        }
-       
+        PrefsProvider.putBoolean("intercept_uninstall", enabled)
     }
 
     private fun getInterceptUninstallEnabled(): Boolean {
-        return try {
-            prefs(PREFS_NAME).getBoolean("intercept_uninstall", false)
-        } catch (_: Exception) {
-            false
-        }
+        return PrefsProvider.getBoolean("intercept_uninstall", false)
     }
 
     private fun saveFollowUninstallWithInstaller(enabled: Boolean) {
-        try {
-            prefs(PREFS_NAME).edit {
-                putBoolean(KEY_FOLLOW_UNINSTALL_WITH_INSTALLER, enabled)
-            }
-        } catch (_: Exception) {
-        }
-      
+        PrefsProvider.putBoolean(KEY_FOLLOW_UNINSTALL_WITH_INSTALLER, enabled)
     }
 
     private fun getFollowUninstallWithInstaller(): Boolean {
-        return try {
-            prefs(PREFS_NAME).getBoolean(KEY_FOLLOW_UNINSTALL_WITH_INSTALLER, true)
-        } catch (_: Exception) {
-            true
-        }
+        return PrefsProvider.getBoolean(KEY_FOLLOW_UNINSTALL_WITH_INSTALLER, true)
     }
 
     private fun saveSelectedUninstallerPackage(packageName: String) {
-        try {
-            prefs(PREFS_NAME).edit {
-                putString(KEY_SELECTED_UNINSTALLER_PACKAGE, packageName)
-            }
-        } catch (_: Exception) {
-        }
-       
+        PrefsProvider.putString(KEY_SELECTED_UNINSTALLER_PACKAGE, packageName)
     }
 
     private fun clearSelectedUninstallerPackage() {
-        try {
-            prefs(PREFS_NAME).edit {
-                remove(KEY_SELECTED_UNINSTALLER_PACKAGE)
-            }
-        } catch (_: Exception) {
-        }
+        PrefsProvider.remove(KEY_SELECTED_UNINSTALLER_PACKAGE)
     }
 
     private fun getSelectedUninstallerPackage(): String? {
-        return try {
-            prefs(PREFS_NAME).getString(KEY_SELECTED_UNINSTALLER_PACKAGE)
-        } catch (_: Exception) {
-            null
-        }
+        return PrefsProvider.getString(KEY_SELECTED_UNINSTALLER_PACKAGE)
     }
 
     private fun getUninstallerApps(): List<InstallerApp> {
@@ -287,39 +223,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun saveInterceptSessionInstallEnabled(enabled: Boolean) {
-        try {
-            prefs(PREFS_NAME).edit {
-                putBoolean("intercept_session_install", enabled)
-            }
-        } catch (_: Exception) {
-        }
-    
+        PrefsProvider.putBoolean("intercept_session_install", enabled)
     }
 
     private fun getInterceptSessionInstallEnabled(): Boolean {
-        return try {
-            prefs(PREFS_NAME).getBoolean("intercept_session_install", false)
-        } catch (_: Exception) {
-            false
-        }
+        return PrefsProvider.getBoolean("intercept_session_install", false)
     }
 
     private fun saveFixPermissionsEnabled(enabled: Boolean) {
-        try {
-            prefs(PREFS_NAME).edit {
-                putBoolean("fix_permissions", enabled)
-            }
-        } catch (_: Exception) {
-        }
-     
+        PrefsProvider.putBoolean("fix_permissions", enabled)
     }
 
     private fun getFixPermissionsEnabled(): Boolean {
-        return try {
-            prefs(PREFS_NAME).getBoolean("fix_permissions", false)
-        } catch (_: Exception) {
-            false
-        }
+        return PrefsProvider.getBoolean("fix_permissions", false)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -376,6 +292,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                 item {
+                    HotReloadCard()
+                }
+
+                item {
                     SettingsGroup(
                         title = stringResource(R.string.installer_settings_title),
                         items = listOf(
@@ -402,7 +322,7 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().animateContentSize(),
                         shape = MaterialTheme.shapes.medium,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -500,7 +420,7 @@ class MainActivity : ComponentActivity() {
 
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().animateContentSize(),
                         shape = MaterialTheme.shapes.medium,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -813,7 +733,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun ModuleStatusCard() {
-        val isActive = runCatching { YukiHookAPI.Status.isXposedModuleActive }.getOrDefault(false)
+        val isActive = PrefsProvider.isModuleActive()
         val containerColor =
             if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
@@ -933,6 +853,80 @@ class MainActivity : ComponentActivity() {
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun HotReloadCard() {
+        val service by XposedServiceHolder.state
+        val cap = remember(service) { HotReloadTrigger.probe() }
+        var running by remember { mutableStateOf(false) }
+        var summary by remember { mutableStateOf<String?>(null) }
+        val available = cap is HotReloadTrigger.Capability.Available
+        val textNoTargets = stringResource(R.string.hot_reload_no_targets)
+        val textSummary = stringResource(R.string.hot_reload_summary)
+        val textRunning = stringResource(R.string.hot_reload_running)
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = available && !running) {
+                    running = true
+                    summary = null
+                    if (!HotReloadTrigger.reloadAllStale(
+                            onlyStale = true,
+                            onFinished = { outcome ->
+                                running = false
+                                summary = if (outcome.total == 0) textNoTargets
+                                else textSummary.format(outcome.success, outcome.failed, outcome.processDied, outcome.total)
+                            }
+                        )
+                    ) {
+                        running = false
+                    }
+                },
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (running) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = if (available) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.hot_reload_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = summary ?: when {
+                            running -> textRunning
+                            !available -> stringResource(R.string.hot_reload_unavailable)
+                            else -> ""
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
                 }
             }
         }

@@ -47,4 +47,9 @@
     <string name="view_source_code">查看源码</string>
     <string name="source_code_desc">在 GitHub 上查看源码</string>
     <string name="github_url">https://github.com/Chimioo/inxlocker</string>
+    <string name="hot_reload_title">热重载</string>
+    <string name="hot_reload_unavailable">热重载不可用</string>
+    <string name="hot_reload_running">正在重载…</string>
+    <string name="hot_reload_no_targets">所有 Hook 进程均已是最新。</string>
+    <string name="hot_reload_summary">完成 · 成功 %1$d / 失败 %2$d / 进程终止 %3$d（共 %4$d）</string>
 </resources>

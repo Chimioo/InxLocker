@@ -1,7 +1,8 @@
+@file:Suppress("DEPRECATION")
+
 package io.github.chimio.inxlocker.util
 
 import android.content.Intent
-import com.highcapable.yukihookapi.hook.log.YLog
 
 object IntentAnalyzer {
     private const val TAG = "IntentAnalyzer"
@@ -16,13 +17,13 @@ object IntentAnalyzer {
     fun analyze(intent: Intent): Result = runCatching {
         val original = IntentSnapshot.capture(intent)
 
-        YLog.d(TAG, "Intent action: ${original.action}")
-        YLog.d(TAG, "Intent component: ${original.component}")
-        YLog.d(TAG, "package: ${original.packageName}")
-        YLog.d(TAG, "Intent type: ${intent.type}")
-        YLog.d(TAG, "Intent data: ${intent.data}")
-        YLog.d(TAG, "Intent clipData: ${intent.clipData}")
-        YLog.d(TAG, "Intent extras: ${formatExtras(intent)}")
+        d(TAG, "Intent action: ${original.action}")
+        d(TAG, "Intent component: ${original.component}")
+        d(TAG, "package: ${original.packageName}")
+        d(TAG, "Intent type: ${intent.type}")
+        d(TAG, "Intent data: ${intent.data}")
+        d(TAG, "Intent clipData: ${intent.clipData}")
+        d(TAG, "Intent extras: ${formatExtras(intent)}")
 
         if (intent.action !in allowedActions) return Result.ShouldNotRedirect
 

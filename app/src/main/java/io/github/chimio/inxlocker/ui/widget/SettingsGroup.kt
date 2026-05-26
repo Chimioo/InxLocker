@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import io.github.chimio.inxlocker.ui.theme.Dimensions
@@ -54,12 +55,14 @@ fun SettingsGroup(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column {
-            items.forEachIndexed { index, item ->
-                SettingsItemRow(
-                    item = item,
-                    showDivider = index < items.size - 1
-                )
+        Box(modifier = Modifier.clip(MaterialTheme.shapes.medium)) {
+            Column {
+                items.forEachIndexed { index, item ->
+                    SettingsItemRow(
+                        item = item,
+                        showDivider = index < items.size - 1
+                    )
+                }
             }
         }
     }

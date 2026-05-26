@@ -2,6 +2,7 @@ package io.github.chimio.inxlocker.ui.widget
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,12 +52,14 @@ fun SwitchGroup(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column {
-            items.forEachIndexed { index, item ->
-                SettingsSwitchRow(
-                    item = item,
-                    showDivider = index < items.size - 1
-                )
+        Box(modifier = Modifier.clip(MaterialTheme.shapes.medium)) {
+            Column {
+                items.forEachIndexed { index, item ->
+                    SettingsSwitchRow(
+                        item = item,
+                        showDivider = index < items.size - 1
+                    )
+                }
             }
         }
     }

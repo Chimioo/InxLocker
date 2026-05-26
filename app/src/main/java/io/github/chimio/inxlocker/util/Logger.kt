@@ -1,37 +1,45 @@
 package io.github.chimio.inxlocker.util
 
-import com.highcapable.yukihookapi.hook.log.YLog
+import android.util.Log
+import io.github.libxposed.api.XposedInterface
 
-private object LogSwitchProvider {
-    private const val KEY_ENABLE = "enable_debug_log"
-
-    fun isEnabled(): Boolean = try {
-        PrefsProvider.getBoolean(KEY_ENABLE, true)
-    } catch (_: Throwable) {
-        true
-    }
-}
 
 private const val DEFAULT_LOG_TAG = "InxLocker"
 
-fun YLog.d(tag: String = DEFAULT_LOG_TAG, message: String) {
-    if (LogSwitchProvider.isEnabled()) YLog.debug("[$tag] $message")
-}
+lateinit var xposedInterface: XposedInterface
 
-fun YLog.i(tag: String = DEFAULT_LOG_TAG, message: String) {
-    if (LogSwitchProvider.isEnabled()) YLog.info("[$tag] $message")
-}
-
-fun YLog.w(tag: String = DEFAULT_LOG_TAG, message: String) {
-    if (LogSwitchProvider.isEnabled()) YLog.warn("[$tag] $message")
-}
-
-fun YLog.e(tag: String = DEFAULT_LOG_TAG, message: String, throwable: Throwable? = null) {
-    if (throwable != null) {
-        YLog.error("[$tag] $message\n${throwable.stackTraceToString()}")
+fun d(tag: String = DEFAULT_LOG_TAG, message: String) {
+    if (::xposedInterface.isInitialized) {
+        xposedInterface.log(Log.DEBUG, tag, message)
     } else {
-        YLog.error("[$tag] $message")
+        Log.d(tag, message)
     }
 }
 
+fun i(tag: String = DEFAULT_LOG_TAG, message: String) {
+    if (::xposedInterface.isInitialized) {
+        xposedInterface.log(Log.INFO, tag, message)
+    } else {
+        Log.i(tag, message)
+    }
+}
 
+fun w(tag: String = DEFAULT_LOG_TAG, message: String) {
+    if (::xposedInterface.isInitialized) {
+        xposedInterface.log(Log.WARN, tag, message)
+    } else {
+        Log.w(tag, message)
+    }
+}
+
+fun e(tag: String = DEFAULT_LOG_TAG, message: String, throwable: Throwable? = null) {
+    if (::xposedInterface.isInitialized) {
+        xposedInterface.log(Log.ERROR, tag, message, throwable)
+    } else {
+        if (throwable != null) {
+            Log.e(tag, message, throwable)
+        } else {
+            Log.e(tag, message)
+        }
+    }
+}
