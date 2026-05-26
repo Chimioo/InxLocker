@@ -23,5 +23,3 @@
 -keep class io.github.chimio.inxlocker.hook.HookEntry { *; }
 
 -dontwarn java.lang.reflect.AnnotatedType
-
--keep class io.github.libxposed.annotation.** { *; }

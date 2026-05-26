@@ -84,7 +84,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     // libxposed API 102
-    compileOnly(libs.libxposed.api)
+    implementation(libs.libxposed.api)
     implementation(libs.libxposed.service)
 
     implementation(libs.androidx.compose.material.icons.core)
