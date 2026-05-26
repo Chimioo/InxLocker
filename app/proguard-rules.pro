@@ -20,6 +20,10 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep class io.github.chimio.inxlocker.hook.HookEntry { *; }
+-keep class io.github.libxposed.api.** { *; }
+-keep class io.github.libxposed.service.** { *; }
+-keep class io.github.chimio.inxlocker.hook.** { *; }
+-keep class io.github.chimio.inxlocker.util.** { *; }
 
 -dontwarn java.lang.reflect.AnnotatedType
+-dontwarn io.github.libxposed.annotation.**

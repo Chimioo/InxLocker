@@ -27,9 +27,18 @@ class HookEntry : XposedModule() {
         private val isFixingPermissions = ThreadLocal<Boolean>()
         private var systemServerClassLoader: ClassLoader? = null
         private var appProcessClassLoader: ClassLoader? = null
+        private var xposed: XposedInterface? = null
+
+        private fun XposedInterface.HookBuilder.tryId(id: String): XposedInterface.HookBuilder {
+            if ((xposed?.getApiVersion() ?: 0) >= 102) {
+                return runCatching { setId(id) }.getOrDefault(this)
+            }
+            return this
+        }
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
+        xposed = this
         initXposed(this)
         PrefsProvider.init(getRemotePreferences("selected_installer_package"))
     }
@@ -55,6 +64,7 @@ class HookEntry : XposedModule() {
     }
 
     override fun onHotReloaded(param: HotReloadedParam) {
+        xposed = this
         initXposed(this)
         PrefsProvider.init(getRemotePreferences("selected_installer_package"))
         i(TAG, "Loading new hooks")
@@ -74,8 +84,8 @@ class HookEntry : XposedModule() {
 
         param.oldHookHandles.forEach { handle ->
             val entry = newHooks.remove(handle.id)
-            if (entry != null) {
-                handle.replaceHook(entry.second)
+            if (entry != null && (xposed?.getApiVersion() ?: 0) >= 102) {
+                runCatching { handle.replaceHook(entry.second) }
             } else {
                 handle.unhook()
             }
@@ -84,7 +94,7 @@ class HookEntry : XposedModule() {
         newHooks.forEach { (id, entry) ->
             runCatching {
                 val (method, hooker) = entry
-                hook(method).setId(id).intercept(hooker)
+                hook(method).tryId(id).intercept(hooker)
             }
         }
     }
@@ -229,7 +239,7 @@ class HookEntry : XposedModule() {
         if (Build.VERSION.SDK_INT >= 28) {
             runCatching {
                 val method = targetClass.getDeclaredMethod("execute")
-                hook(method).setId("starter_execute").intercept(object : XposedInterface.Hooker {
+                hook(method).tryId("starter_execute").intercept(object : XposedInterface.Hooker {
                     override fun intercept(chain: XposedInterface.Chain): Any? {
                         try {
 
@@ -261,7 +271,7 @@ class HookEntry : XposedModule() {
                 val method = targetClass.declaredMethods.firstOrNull {
                     it.name == "startActivityMayWait"
                 } ?: return
-                hook(method).setId("starter_may_wait").intercept { chain ->
+                hook(method).tryId("starter_may_wait").intercept { chain ->
                     try {
                         val args = chain.args
                         val intentIndex = args.indexOfFirst { it is Intent }
@@ -293,7 +303,7 @@ class HookEntry : XposedModule() {
                 it.name == "generateInfoInternal"
             } ?: return
 
-            hook(method).setId("pm_generate_info").intercept(object : XposedInterface.Hooker {
+            hook(method).tryId("pm_generate_info").intercept(object : XposedInterface.Hooker {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
                     if (PrefsProvider.getBoolean("fix_permissions", false)) {
                         isFixingPermissions.set(true)
@@ -353,7 +363,7 @@ class HookEntry : XposedModule() {
                 "checkCallingOrSelfPermission",
                 String::class.java
             )
-            hook(method).setId("pm_check_permission").intercept(object : XposedInterface.Hooker {
+            hook(method).tryId("pm_check_permission").intercept(object : XposedInterface.Hooker {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
                     val result = chain.proceed()
                     try {
@@ -374,7 +384,7 @@ class HookEntry : XposedModule() {
         runCatching {
             val method = cl.loadClass("android.content.ContextWrapper")
                 .getDeclaredMethod("startActivity", Intent::class.java)
-            hook(method).setId("cw_start_activity").intercept { chain ->
+            hook(method).tryId("cw_start_activity").intercept { chain ->
                 try {
                     val intent = chain.getArg(0) as? Intent
                     if (intent != null) handleIntentIfNeeded(intent, "ContextWrapper.startActivity")
@@ -388,7 +398,7 @@ class HookEntry : XposedModule() {
         runCatching {
             val method = cl.loadClass("android.app.Activity")
                 .getDeclaredMethod("startActivity", Intent::class.java)
-            hook(method).setId("act_start_activity").intercept { chain ->
+            hook(method).tryId("act_start_activity").intercept { chain ->
                 try {
                     val intent = chain.getArg(0) as? Intent
                     if (intent != null) handleIntentIfNeeded(intent, "Activity.startActivity")
@@ -402,7 +412,7 @@ class HookEntry : XposedModule() {
         runCatching {
             val method = cl.loadClass("android.app.Activity")
                 .getDeclaredMethod("startActivityForResult", Intent::class.java, Int::class.javaPrimitiveType!!)
-            hook(method).setId("act_start_for_result").intercept { chain ->
+            hook(method).tryId("act_start_for_result").intercept { chain ->
                 try {
                     val intent = chain.getArg(0) as? Intent
                     if (intent != null) handleIntentIfNeeded(intent, "Activity.startActivityForResult")
