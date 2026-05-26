@@ -89,7 +89,6 @@ data class InstallerApp(
 class MainActivity : ComponentActivity() {
 
     private companion object {
-        private const val PREFS_NAME = "selected_installer_package"
         private const val KEY_FORCED_INSTALLER_COMPONENTS = "forced_installer_components"
         private const val KEY_FOLLOW_UNINSTALL_WITH_INSTALLER = "follow_uninstall_with_installer"
         private const val KEY_SELECTED_UNINSTALLER_PACKAGE = "selected_uninstaller_package"
@@ -480,16 +479,14 @@ class MainActivity : ComponentActivity() {
                 installerList = installerList,
                 selectedPackage = selectedPackage,
                 forcedComponents = forcedComponents,
-                onDismiss = { showInstallerDialog = false },
+                onDismiss = { },
                 onInstallerSelected = { packageName ->
                     saveSelectedInstaller(packageName)
                     selectedPackage = packageName
-                    showInstallerDialog = false
                 },
                 onClearSelection = {
                     clearSelectedInstaller()
                     selectedPackage = null
-                    showInstallerDialog = false
                 },
                 onToggleForceComponent = { packageName, className ->
                     val key = "$packageName/$className"
@@ -506,16 +503,14 @@ class MainActivity : ComponentActivity() {
             UninstallerSelectionDialog(
                 uninstallerList = uninstallerList,
                 selectedPackage = selectedUninstallerPackage,
-                onDismiss = { showUninstallerDialog = false },
+                onDismiss = { },
                 onUninstallerSelected = { packageName ->
                     saveSelectedUninstallerPackage(packageName)
                     selectedUninstallerPackage = packageName
-                    showUninstallerDialog = false
                 },
                 onClearSelection = {
                     clearSelectedUninstallerPackage()
                     selectedUninstallerPackage = null
-                    showUninstallerDialog = false
                 }
             )
         }
@@ -921,7 +916,7 @@ class MainActivity : ComponentActivity() {
                         text = summary ?: when {
                             running -> textRunning
                             !available -> stringResource(R.string.hot_reload_unavailable)
-                            else -> ""
+                            else -> stringResource(R.string.hot_reload_initial_subtitle)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -3,43 +3,38 @@ package io.github.chimio.inxlocker.util
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
 
-
 private const val DEFAULT_LOG_TAG = "InxLocker"
 
-lateinit var xposedInterface: XposedInterface
+private var _xposed: XposedInterface? = null
+
+fun initXposed(xposed: XposedInterface) {
+    _xposed = xposed
+}
 
 fun d(tag: String = DEFAULT_LOG_TAG, message: String) {
-    if (::xposedInterface.isInitialized) {
-        xposedInterface.log(Log.DEBUG, tag, message)
-    } else {
-        Log.d(tag, message)
-    }
+    Log.d(tag, message)
+    _xposed?.log(Log.DEBUG, tag, message)
 }
 
 fun i(tag: String = DEFAULT_LOG_TAG, message: String) {
-    if (::xposedInterface.isInitialized) {
-        xposedInterface.log(Log.INFO, tag, message)
-    } else {
-        Log.i(tag, message)
-    }
+    Log.i(tag, message)
+    _xposed?.log(Log.INFO, tag, message)
 }
 
 fun w(tag: String = DEFAULT_LOG_TAG, message: String) {
-    if (::xposedInterface.isInitialized) {
-        xposedInterface.log(Log.WARN, tag, message)
-    } else {
-        Log.w(tag, message)
-    }
+    Log.w(tag, message)
+    _xposed?.log(Log.WARN, tag, message)
 }
 
 fun e(tag: String = DEFAULT_LOG_TAG, message: String, throwable: Throwable? = null) {
-    if (::xposedInterface.isInitialized) {
-        xposedInterface.log(Log.ERROR, tag, message, throwable)
+    if (throwable != null) {
+        Log.e(tag, message, throwable)
     } else {
-        if (throwable != null) {
-            Log.e(tag, message, throwable)
-        } else {
-            Log.e(tag, message)
-        }
+        Log.e(tag, message)
+    }
+    if (throwable != null) {
+        _xposed?.log(Log.ERROR, tag, message, throwable)
+    } else {
+        _xposed?.log(Log.ERROR, tag, message)
     }
 }

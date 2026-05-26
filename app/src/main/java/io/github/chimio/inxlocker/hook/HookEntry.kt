@@ -8,7 +8,7 @@ import io.github.chimio.inxlocker.util.IntentRedirector
 import io.github.chimio.inxlocker.util.PrefsProvider
 import io.github.chimio.inxlocker.util.e
 import io.github.chimio.inxlocker.util.i
-import io.github.chimio.inxlocker.util.xposedInterface
+import io.github.chimio.inxlocker.util.initXposed
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
@@ -30,7 +30,7 @@ class HookEntry : XposedModule() {
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
-        xposedInterface = this
+        initXposed(this)
         PrefsProvider.init(getRemotePreferences("selected_installer_package"))
     }
 
@@ -55,7 +55,7 @@ class HookEntry : XposedModule() {
     }
 
     override fun onHotReloaded(param: HotReloadedParam) {
-        xposedInterface = this
+        initXposed(this)
         PrefsProvider.init(getRemotePreferences("selected_installer_package"))
         i(TAG, "Loading new hooks")
         i(TAG, "isSystemServer=${param.isSystemServer}, processName=${param.processName}")
@@ -180,7 +180,6 @@ class HookEntry : XposedModule() {
 
     private fun buildAppProcessHooks(): MutableMap<String, Pair<java.lang.reflect.Method, XposedInterface.Hooker>> {
         val map = mutableMapOf<String, Pair<java.lang.reflect.Method, XposedInterface.Hooker>>()
-        // 这里使用 this.javaClass.classLoader 即可（模块 CL 也是 boot CL 的 parent，能加载 framework 类）
         val cl = this.javaClass.classLoader ?: return map
 
         runCatching {
