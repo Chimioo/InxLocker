@@ -44,74 +44,37 @@ jobs:
           sed -i 's/\r$//' ./gradlew
           chmod +x ./gradlew
 
-      - name: Build release APK
-        run: ./gradlew --no-daemon clean assembleRelease
-
-      - name: 准备密钥库
-        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+      - name: 准备签名密钥库
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         env:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
         run: |
-          set -euo pipefail
-          if [ -z "${SIGNING_KEYSTORE_BASE64:-}" ]; then
-            echo "未配置签名所需 Secrets,跳过生成密钥库文件";
-            exit 0;
+          if [ -n "${SIGNING_KEYSTORE_BASE64:-}" ]; then
+            echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > keystore.jks
+            echo "SIGNING_READY=true" >> "$GITHUB_ENV"
           fi
-          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > keystore.jks
-          ls -l keystore.jks
 
-      - name: 对齐并签名 APK
-        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+      - name: Build release APK
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         env:
+          SIGNING_READY: ${{ env.SIGNING_READY }}
+          SIGNING_STORE_FILE: keystore.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
         run: |
-          set -euo pipefail
-          BUILD_TOOLS_DIR="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools/36.0.0"
-          ZIPALIGN="$BUILD_TOOLS_DIR/zipalign"
-          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
-          if [ -z "${SIGNING_KEY_ALIAS:-}" ] || [ -z "${SIGNING_KEY_PASSWORD:-}" ] || [ -z "${SIGNING_STORE_PASSWORD:-}" ] || [ ! -f keystore.jks ]; then
-            echo "未配置签名所需 Secrets,跳过签名";
-            exit 0;
-          fi
-          ORIG_APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
-          echo "Release APK: $ORIG_APK"
-          ALIGNED_APK="${ORIG_APK%.apk}-aligned.apk"
-          # zipalign (if already aligned, fall back to copy)
-          if [ -x "$ZIPALIGN" ]; then
-            "$ZIPALIGN" -p -f 4 "$ORIG_APK" "$ALIGNED_APK" || cp "$ORIG_APK" "$ALIGNED_APK"
+          if [ "${SIGNING_READY:-}" = "true" ]; then
+            ./gradlew --no-daemon clean assembleRelease \
+              -Pandroid.injected.signing.store.file="$SIGNING_STORE_FILE" \
+              -Pandroid.injected.signing.store.password="$SIGNING_STORE_PASSWORD" \
+              -Pandroid.injected.signing.key.alias="$SIGNING_KEY_ALIAS" \
+              -Pandroid.injected.signing.key.password="$SIGNING_KEY_PASSWORD"
           else
-            cp "$ORIG_APK" "$ALIGNED_APK"
+            ./gradlew --no-daemon clean assembleRelease
           fi
-          # replace original with aligned to keep original filename
-          mv -f "$ALIGNED_APK" "$ORIG_APK"
-          # apksigner
-          "$APKSIGNER" sign \
-            --ks keystore.jks \
-            --ks-key-alias "$SIGNING_KEY_ALIAS" \
-            --ks-pass pass:"$SIGNING_STORE_PASSWORD" \
-            --key-pass pass:"$SIGNING_KEY_PASSWORD" \
-            "$ORIG_APK"
-          "$APKSIGNER" verify --print-certs "$ORIG_APK"
-          echo "Release APK: $ORIG_APK"
-          sha256sum "$ORIG_APK" || true
-
-      - name: 验证 APK(非 fork 运行)
-        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
-        run: |
-          BUILD_TOOLS_DIR="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools/36.0.0"
-          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
-          FILE=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1 || true)
-          if [ ! -f "$FILE" ]; then
-            echo "未找到 Release APK。" >&2
-            exit 1
-          fi
-          # 验证 APK 签名;非零退出表示验证失败
-          "$APKSIGNER" verify --print-certs "$FILE"
 
       - name: Upload APK artifact
-        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         uses: actions/upload-artifact@v4
         with:
           name: InxLocker-apk
@@ -119,7 +82,7 @@ jobs:
           if-no-files-found: error
 
       - name: Send APK to Telegram (optional)
-        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         continue-on-error: true
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -197,6 +160,26 @@ jobs:
           mv "$APK_FILE" "release-apk/${NEW_NAME}"
           echo "APK_PATH=release-apk/${NEW_NAME}" >> "$GITHUB_ENV"
 
+      - name: Create release on this repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          TITLE="${{ steps.version.outputs.release_title }}"
+          BODY="${{ steps.changelog.outputs.changelog }}"
+          APK="${{ env.APK_PATH }}"
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, uploading APK asset..."
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            echo "Creating new release $TAG..."
+            gh release create "$TAG" \
+              --title "$TITLE" \
+              --notes "$BODY" \
+              "$APK"
+          fi
+
       - name: Create release on Xposed-Modules-Repo
         env:
           GH_TOKEN: ${{ secrets.XP_REPO_PAT }}
@@ -211,7 +194,6 @@ jobs:
             exit 0
           fi
 
-          # Check if release already exists
           if gh release view "$TAG" --repo "Xposed-Modules-Repo/io.github.chimio.inxlocker" > /dev/null 2>&1; then
             echo "Release $TAG already exists, uploading APK asset..."
             gh release upload "$TAG" "$APK" \
