@@ -104,7 +104,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: needs.build.result == 'success' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
 
