@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,10 +35,13 @@ import androidx.core.graphics.drawable.toBitmap
 import io.github.chimio.inxlocker.ui.theme.Dimensions
 import kotlin.collections.forEachIndexed
 
+@Immutable
+data class StableSettingsList(val list: List<SettingsItem>)
+
 @Composable
 fun SettingsGroup(
     title: String,
-    items: List<SettingsItem>
+    items: StableSettingsList
 ) {
     Text(
         text = title,
@@ -57,10 +61,10 @@ fun SettingsGroup(
     ) {
         Box(modifier = Modifier.clip(MaterialTheme.shapes.medium)) {
             Column {
-                items.forEachIndexed { index, item ->
+                items.list.forEachIndexed { index, item ->
                     SettingsItemRow(
                         item = item,
-                        showDivider = index < items.size - 1
+                        showDivider = index < items.list.size - 1
                     )
                 }
             }

@@ -2,7 +2,7 @@ package io.github.chimio.inxlocker.util
 
 import android.os.Handler
 import android.os.Looper
-import io.github.libxposed.service.HookedProcess
+import io.github.libxposed.service.HookedTarget
 import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
 
@@ -62,11 +62,11 @@ object HotReloadTrigger {
 
         val targets = runCatching { service.runningTargets }.getOrNull().orEmpty()
         val candidates = if (onlyStale) {
-            targets.filter { it.state == HookedProcess.TARGET_STATE_STALE }
+            targets.filter { it.state == HookedTarget.State.STALE }
         } else {
             targets.filter {
-                it.state == HookedProcess.TARGET_STATE_STALE ||
-                    it.state == HookedProcess.TARGET_STATE_UP_TO_DATE
+                it.state == HookedTarget.State.STALE ||
+                    it.state == HookedTarget.State.UP_TO_DATE
             }
         }
 
@@ -91,10 +91,10 @@ object HotReloadTrigger {
             runCatching {
                 service.hotReloadModule(proc, null) { p, result ->
                     val line = Outcome.Line(
-                        processName = p.processName ?: "<unknown>",
+                        processName = p.processName,
                         pid = p.pid,
-                        status = result.status(),
-                        message = result.message()
+                        status = result.status,
+                        message = result.message
                     )
                     main.post {
                         synchronized(results) { results += line }
@@ -104,7 +104,7 @@ object HotReloadTrigger {
                 }
             }.onFailure { t ->
                 val line = Outcome.Line(
-                    processName = proc.processName ?: "<unknown>",
+                    processName = proc.processName,
                     pid = proc.pid,
                     status = HotReloadResult.Status.FAILED,
                     message = t.message ?: t.javaClass.simpleName
@@ -126,8 +126,9 @@ object HotReloadTrigger {
         var died = 0
         lines.forEach {
             when (it.status) {
-                HotReloadResult.Status.SUCCESS -> success++
+                HotReloadResult.Status.SUCCEEDED -> success++
                 HotReloadResult.Status.FAILED -> failed++
+                HotReloadResult.Status.UNSUPPORTED -> skipped++
                 HotReloadResult.Status.IN_PROGRESS -> skipped++
                 HotReloadResult.Status.PROCESS_DIED -> died++
             }

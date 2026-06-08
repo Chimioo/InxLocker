@@ -15,12 +15,4 @@ object XposedServiceHolder {
     }
 
     fun get(): XposedService? = serviceRef
-
-    fun isHotReloadAvailable(): Boolean {
-        val s = serviceRef ?: return false
-        return runCatching {
-            s.apiVersion >= XposedService.API_102 &&
-                (s.frameworkProperties and XposedService.PROP_RT_HOT_RELOAD) != 0L
-        }.getOrDefault(false)
-    }
 }

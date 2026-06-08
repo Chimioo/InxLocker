@@ -30,7 +30,7 @@ class HookEntry : XposedModule() {
         private var xposed: XposedInterface? = null
 
         private fun XposedInterface.HookBuilder.tryId(id: String): XposedInterface.HookBuilder {
-            if ((xposed?.getApiVersion() ?: 0) >= 102) {
+            if ((xposed?.apiVersion ?: 0) >= 102) {
                 return runCatching { setId(id) }.getOrDefault(this)
             }
             return this
@@ -48,8 +48,6 @@ class HookEntry : XposedModule() {
         hookActivityStarterExecute(param.classLoader)
         hookPackageInstallerSession(param.classLoader)
     }
-
-
 
     override fun onPackageReady(param: XposedModuleInterface.PackageReadyParam) {
         if (!param.isFirstPackage) return
@@ -82,12 +80,14 @@ class HookEntry : XposedModule() {
             buildAppProcessHooks()
         }
 
-        param.oldHookHandles.forEach { handle ->
-            val entry = newHooks.remove(handle.id)
-            if (entry != null && (xposed?.getApiVersion() ?: 0) >= 102) {
-                runCatching { handle.replaceHook(entry.second) }
-            } else {
-                handle.unhook()
+        if ((xposed?.apiVersion ?: 0) >= 102) {
+            param.oldHookHandles.forEach { handle ->
+                val entry = newHooks.remove(handle.id)
+                if (entry != null) {
+                    runCatching { handle.replaceHook(entry.second) }
+                } else {
+                    handle.unhook()
+                }
             }
         }
 
@@ -95,6 +95,7 @@ class HookEntry : XposedModule() {
             runCatching {
                 val (method, hooker) = entry
                 hook(method).tryId(id).intercept(hooker)
+                i(TAG, "$method Hook success")
             }
         }
     }
@@ -242,7 +243,6 @@ class HookEntry : XposedModule() {
                 hook(method).tryId("starter_execute").intercept(object : XposedInterface.Hooker {
                     override fun intercept(chain: XposedInterface.Chain): Any? {
                         try {
-
                             val thisObj = chain.thisObject ?: return chain.proceed()
 
                             val mRequestField = findField(thisObj.javaClass, "mRequest")
@@ -386,8 +386,9 @@ class HookEntry : XposedModule() {
                 .getDeclaredMethod("startActivity", Intent::class.java)
             hook(method).tryId("cw_start_activity").intercept { chain ->
                 try {
-                    val intent = chain.getArg(0) as? Intent
-                    if (intent != null) handleIntentIfNeeded(intent, "ContextWrapper.startActivity")
+                    (chain.getArg(0) as? Intent)?.let { intent ->
+                        handleIntentIfNeeded(intent, "ContextWrapper.startActivity")
+                    }
                 } catch (e: Exception) {
                     e(TAG, "Hook ContextWrapper.startActivity error: ${e.message}", e)
                 }

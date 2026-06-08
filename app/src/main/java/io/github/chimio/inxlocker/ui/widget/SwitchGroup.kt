@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,10 +32,13 @@ import androidx.compose.ui.unit.dp
 import io.github.chimio.inxlocker.ui.theme.Dimensions
 import androidx.compose.material3.Switch as M3Switch
 
+@Immutable
+data class StableSwitchList(val list: List<SwitchItem>)
+
 @Composable
 fun SwitchGroup(
     title: String,
-    items: List<SwitchItem>
+    items: StableSwitchList
 ) {
     Text(
         text = title,
@@ -54,10 +58,10 @@ fun SwitchGroup(
     ) {
         Box(modifier = Modifier.clip(MaterialTheme.shapes.medium)) {
             Column {
-                items.forEachIndexed { index, item ->
+                items.list.forEachIndexed { index, item ->
                     SettingsSwitchRow(
                         item = item,
-                        showDivider = index < items.size - 1
+                        showDivider = index < items.list.size - 1
                     )
                 }
             }

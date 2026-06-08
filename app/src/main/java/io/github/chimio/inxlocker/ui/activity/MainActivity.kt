@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package io.github.chimio.inxlocker.ui.activity
 
 import android.content.ComponentName
@@ -50,9 +52,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,15 +78,26 @@ import io.github.chimio.inxlocker.ui.widget.SettingsGroup
 import io.github.chimio.inxlocker.ui.widget.SettingsItem
 import io.github.chimio.inxlocker.ui.widget.SettingsItemRow
 import io.github.chimio.inxlocker.ui.widget.SettingsSwitchRow
+import io.github.chimio.inxlocker.ui.widget.StableSettingsList
 import io.github.chimio.inxlocker.ui.widget.SwitchItem
 import io.github.chimio.inxlocker.ui.theme.Dimensions
 
+@Immutable
+class StableDrawable(val value: Drawable)
+
+@Immutable
 data class InstallerApp(
     val resolveInfo: ResolveInfo,
     val label: String,
     val packageName: String,
-    val icon: Drawable
+    val icon: StableDrawable
 )
+
+@Immutable
+data class StableInstallerList(val list: List<InstallerApp>)
+
+@Immutable
+data class StableStringSet(val set: Set<String>)
 
 class MainActivity : ComponentActivity() {
 
@@ -115,7 +128,7 @@ class MainActivity : ComponentActivity() {
                     resolveInfo = resolveInfo,
                     label = resolveInfo.loadLabel(packageManager).toString(),
                     packageName = resolveInfo.activityInfo.packageName,
-                    icon = resolveInfo.loadIcon(packageManager)
+                    icon = StableDrawable(resolveInfo.loadIcon(packageManager))
                 )
             }.sortedBy { it.label }
         } catch (_: Exception) {
@@ -213,7 +226,7 @@ class MainActivity : ComponentActivity() {
                     resolveInfo = resolveInfo,
                     label = resolveInfo.loadLabel(packageManager).toString(),
                     packageName = resolveInfo.activityInfo.packageName,
-                    icon = resolveInfo.loadIcon(packageManager)
+                    icon = StableDrawable(resolveInfo.loadIcon(packageManager))
                 )
             }.distinctBy { it.packageName }.sortedBy { it.label }
         } catch (_: Exception) {
@@ -251,12 +264,17 @@ class MainActivity : ComponentActivity() {
     private fun MainScreen() {
         var showInstallerDialog by remember { mutableStateOf(false) }
         var showUninstallerDialog by remember { mutableStateOf(false) }
-        val installerList = remember { getApkInstallerApps() }
-        val uninstallerList = remember { getUninstallerApps() }
+        val installerListWrapper = remember { StableInstallerList(getApkInstallerApps()) }
+        val uninstallerListWrapper = remember { StableInstallerList(getUninstallerApps()) }
+        val installerList = installerListWrapper.list
+        val uninstallerList = uninstallerListWrapper.list
         var selectedPackage by remember {
             mutableStateOf(getSavedInstallerPackage())
         }
-        var forcedComponents by remember { mutableStateOf(getForcedInstallerComponents()) }
+        var forcedComponentsWrapper by remember {
+            mutableStateOf(StableStringSet(getForcedInstallerComponents()))
+        }
+        val forcedComponents = forcedComponentsWrapper.set
 
         var followUninstallWithInstaller by remember {
             mutableStateOf(
@@ -297,17 +315,17 @@ class MainActivity : ComponentActivity() {
                 item {
                     SettingsGroup(
                         title = stringResource(R.string.installer_settings_title),
-                        items = listOf(
+                        items = StableSettingsList(listOf(
                             SettingsItem(
                                 icon = if (selectedPackage == null) Icons.Default.Build else null,
-                                drawableIcon = installerList.find { it.packageName == selectedPackage }?.icon,
+                                drawableIcon = installerList.find { it.packageName == selectedPackage }?.icon?.value,
                                 title = installerList.find { it.packageName == selectedPackage }?.label
                                     ?: stringResource(R.string.installer_system_default),
                                 subtitle = installerList.find { it.packageName == selectedPackage }?.packageName
                                     ?: stringResource(R.string.installer_system_default_desc),
                                 onClick = { showInstallerDialog = true }
                             )
-                        )
+                        ))
                     )
                 }
 
@@ -401,7 +419,7 @@ class MainActivity : ComponentActivity() {
                                         SettingsItemRow(
                                             item = SettingsItem(
                                                 icon = if (selectedUninstaller == null) Icons.Default.Delete else null,
-                                                drawableIcon = selectedUninstaller?.icon,
+                                                drawableIcon = selectedUninstaller?.icon?.value,
                                                 title = selectedUninstaller?.label
                                                     ?: stringResource(R.string.uninstall_default_uninstaller_title),
                                                 subtitle = selectedUninstaller?.packageName
@@ -476,24 +494,26 @@ class MainActivity : ComponentActivity() {
 
         if (showInstallerDialog) {
             InstallerSelectionDialog(
-                installerList = installerList,
+                installerList = installerListWrapper,
                 selectedPackage = selectedPackage,
-                forcedComponents = forcedComponents,
-                onDismiss = { },
+                forcedComponents = forcedComponentsWrapper,
+                onDismiss = { showInstallerDialog = false },
                 onInstallerSelected = { packageName ->
                     saveSelectedInstaller(packageName)
                     selectedPackage = packageName
+                    showInstallerDialog = false
                 },
                 onClearSelection = {
                     clearSelectedInstaller()
                     selectedPackage = null
+                    showInstallerDialog = false
                 },
                 onToggleForceComponent = { packageName, className ->
                     val key = "$packageName/$className"
                     val newSet = forcedComponents.toMutableSet().apply {
                         if (!add(key)) remove(key)
                     }.toSet()
-                    forcedComponents = newSet
+                    forcedComponentsWrapper = StableStringSet(newSet)
                     saveForcedInstallerComponents(newSet)
                 }
             )
@@ -501,16 +521,18 @@ class MainActivity : ComponentActivity() {
 
         if (showUninstallerDialog) {
             UninstallerSelectionDialog(
-                uninstallerList = uninstallerList,
+                uninstallerList = uninstallerListWrapper,
                 selectedPackage = selectedUninstallerPackage,
-                onDismiss = { },
+                onDismiss = { showUninstallerDialog = false },
                 onUninstallerSelected = { packageName ->
                     saveSelectedUninstallerPackage(packageName)
                     selectedUninstallerPackage = packageName
+                    showUninstallerDialog = false
                 },
                 onClearSelection = {
                     clearSelectedUninstallerPackage()
                     selectedUninstallerPackage = null
+                    showUninstallerDialog = false
                 }
             )
         }
@@ -519,7 +541,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     @OptIn(ExperimentalMaterial3Api::class)
     private fun UninstallerSelectionDialog(
-        uninstallerList: List<InstallerApp>,
+        uninstallerList: StableInstallerList,
         selectedPackage: String?,
         onDismiss: () -> Unit,
         onUninstallerSelected: (String) -> Unit,
@@ -552,8 +574,8 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    if (uninstallerList.isNotEmpty()) {
-                        itemsIndexed(uninstallerList) { _, app ->
+                    if (uninstallerList.list.isNotEmpty()) {
+                        itemsIndexed(uninstallerList.list) { _, app ->
                             InstallerItem(
                                 icon = app.icon,
                                 label = app.label,
@@ -572,9 +594,9 @@ class MainActivity : ComponentActivity() {
     @Composable
     @OptIn(ExperimentalMaterial3Api::class)
     private fun InstallerSelectionDialog(
-        installerList: List<InstallerApp>,
+        installerList: StableInstallerList,
         selectedPackage: String?,
-        forcedComponents: Set<String>,
+        forcedComponents: StableStringSet,
         onDismiss: () -> Unit,
         onInstallerSelected: (String) -> Unit,
         onClearSelection: () -> Unit,
@@ -607,11 +629,11 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    if (installerList.isNotEmpty()) {
-                        itemsIndexed(installerList) { _, installer ->
+                    if (installerList.list.isNotEmpty()) {
+                        itemsIndexed(installerList.list) { _, installer ->
                             val className = installer.resolveInfo.activityInfo.name
                             val forceKey = "${installer.packageName}/$className"
-                            val isForced = forcedComponents.contains(forceKey)
+                            val isForced = forcedComponents.set.contains(forceKey)
                             InstallerItem(
                                 icon = installer.icon,
                                 label = installer.label,
@@ -632,7 +654,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun InstallerItem(
-        icon: Drawable?,
+        icon: StableDrawable?,
         label: String,
         packageName: String,
         isSelected: Boolean,
@@ -665,10 +687,11 @@ class MainActivity : ComponentActivity() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (icon != null) {
-                    val w = if (icon.intrinsicWidth > 0) icon.intrinsicWidth else 128
-                    val h = if (icon.intrinsicHeight > 0) icon.intrinsicHeight else 128
+                    val drawable = icon.value
+                    val w = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 128
+                    val h = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 128
                     Image(
-                        bitmap = icon.toBitmap(w, h).asImageBitmap(),
+                        bitmap = drawable.toBitmap(w, h).asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         contentScale = ContentScale.Fit

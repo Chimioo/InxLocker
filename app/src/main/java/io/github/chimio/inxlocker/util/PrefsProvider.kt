@@ -3,19 +3,25 @@ package io.github.chimio.inxlocker.util
 import android.content.SharedPreferences
 import io.github.libxposed.service.XposedService
 import java.util.concurrent.ConcurrentHashMap
+import androidx.core.content.edit
+
 
 object PrefsProvider {
     private const val TAG = "PrefsProvider"
 
     private var prefs: SharedPreferences? = null
-    private val cache = ConcurrentHashMap<String, Any?>()
+    private val cache = ConcurrentHashMap<String, Any>()
     private var _moduleActive = false
 
     private val changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key != null) {
-            val newValue = prefs?.all?.get(key)
-            cache[key] = newValue
-            d(TAG, "Config updated: $key = $newValue")
+        key?.let {
+            val newValue = prefs?.all?.get(it)
+            if (newValue != null) {
+                cache[it] = newValue
+            } else {
+                cache.remove(it)
+            }
+            d(TAG, "Config updated: $it = $newValue")
         }
     }
 
@@ -23,7 +29,9 @@ object PrefsProvider {
 
     fun init(hookPrefs: SharedPreferences) {
         prefs = hookPrefs
-        cache.putAll(hookPrefs.all)
+        hookPrefs.all.forEach { (key, value) ->
+            value?.let { cache[key] = it }
+        }
         hookPrefs.registerOnSharedPreferenceChangeListener(changeListener)
         _moduleActive = true
         d(TAG, "Cache initialized with ${cache.size} items")
@@ -32,7 +40,9 @@ object PrefsProvider {
     fun initForApp(service: XposedService, group: String) {
         val remotePrefs = service.getRemotePreferences(group)
         prefs = remotePrefs
-        cache.putAll(remotePrefs.all)
+        remotePrefs.all.forEach { (key, value) ->
+            value?.let { cache[key] = it }
+        }
         remotePrefs.registerOnSharedPreferenceChangeListener(changeListener)
         _moduleActive = true
         d(TAG, "App RemotePreferences initialized")
@@ -53,28 +63,32 @@ object PrefsProvider {
 
     fun putString(key: String, value: String) {
         try {
-            prefs?.edit()?.putString(key, value)?.apply()
+            prefs?.edit { putString(key, value) }
+            cache[key] = value
         } catch (_: Throwable) {
         }
     }
 
     fun putBoolean(key: String, value: Boolean) {
         try {
-            prefs?.edit()?.putBoolean(key, value)?.apply()
+            prefs?.edit { putBoolean(key, value) }
+            cache[key] = value
         } catch (_: Throwable) {
         }
     }
 
     fun putStringSet(key: String, value: Set<String>) {
         try {
-            prefs?.edit()?.putStringSet(key, value)?.apply()
+            prefs?.edit { putStringSet(key, value) }
+            cache[key] = value
         } catch (_: Throwable) {
         }
     }
 
     fun remove(key: String) {
         try {
-            prefs?.edit()?.remove(key)?.apply()
+            prefs?.edit { remove(key) }
+            cache.remove(key)
         } catch (_: Throwable) {
         }
     }
