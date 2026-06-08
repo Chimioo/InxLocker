@@ -58,14 +58,14 @@ jobs:
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         env:
           SIGNING_READY: ${{ env.SIGNING_READY }}
-          SIGNING_STORE_FILE: keystore.jks
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           if [ "${SIGNING_READY:-}" = "true" ]; then
+            KEYSTORE_PATH="$(pwd)/keystore.jks"
             ./gradlew --no-daemon clean assembleRelease \
-              -Pandroid.injected.signing.store.file="$SIGNING_STORE_FILE" \
+              -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
               -Pandroid.injected.signing.store.password="$SIGNING_STORE_PASSWORD" \
               -Pandroid.injected.signing.key.alias="$SIGNING_KEY_ALIAS" \
               -Pandroid.injected.signing.key.password="$SIGNING_KEY_PASSWORD"
