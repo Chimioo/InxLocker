@@ -142,7 +142,7 @@ jobs:
           if [ -n "$LAST_TAG" ] && [ "$LAST_TAG" != "$TAG" ]; then
             CHANGELOG=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
           else
-            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges -20)
+            CHANGELOG="- $(git log -1 --pretty=%s)"
           fi
           if [ -z "$CHANGELOG" ]; then
             CHANGELOG="- Initial release"
