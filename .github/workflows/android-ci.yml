@@ -32,16 +32,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses
-
       - name: Install Android SDK components
-        run: |
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Fix line endings
         run: |
-          # Convert Windows line endings to Unix format
           sed -i 's/\r$//' ./gradlew
           chmod +x ./gradlew
 
@@ -79,15 +74,12 @@ jobs:
           ORIG_APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
           echo "Release APK: $ORIG_APK"
           ALIGNED_APK="${ORIG_APK%.apk}-aligned.apk"
-          # zipalign (if already aligned, fall back to copy)
           if [ -x "$ZIPALIGN" ]; then
             "$ZIPALIGN" -p -f 4 "$ORIG_APK" "$ALIGNED_APK" || cp "$ORIG_APK" "$ALIGNED_APK"
           else
             cp "$ORIG_APK" "$ALIGNED_APK"
           fi
-          # replace original with aligned to keep original filename
           mv -f "$ALIGNED_APK" "$ORIG_APK"
-          # apksigner
           "$APKSIGNER" sign \
             --ks keystore.jks \
             --ks-key-alias "$SIGNING_KEY_ALIAS" \
@@ -108,7 +100,6 @@ jobs:
             echo "未找到 Release APK。" >&2
             exit 1
           fi
-          # 验证 APK 签名;非零退出表示验证失败
           "$APKSIGNER" verify --print-certs "$FILE"
 
       - name: Upload APK artifact
@@ -138,3 +129,83 @@ jobs:
           [ -f "$FILE" ] || exit 0
           pip install telethon aiohttp
           python3 .github/bot.py "$FILE"
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: InxLocker-apk
+          path: release-apk
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts || echo "")
+          if [ -z "$VERSION_CODE" ]; then
+            VERSION_CODE=$(git rev-list --count HEAD)
+          fi
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "tag=${VERSION_CODE}-${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          echo "release_title=V${VERSION_NAME}(${VERSION_CODE})" >> "$GITHUB_OUTPUT"
+          echo "Version: ${VERSION_NAME} (${VERSION_CODE})"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ] && [ "$LAST_TAG" != "$TAG" ]; then
+            CHANGELOG=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges -20)
+          fi
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="- Initial release"
+          fi
+          echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGELOG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Rename APK file
+        run: |
+          APK_FILE=$(ls release-apk/*.apk | head -n 1)
+          VERSION_NAME="${{ steps.version.outputs.version_name }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
+          NEW_NAME="InxLocker_${VERSION_NAME}(${VERSION_CODE}).apk"
+          mv "$APK_FILE" "release-apk/${NEW_NAME}"
+          echo "APK_PATH=release-apk/${NEW_NAME}" >> "$GITHUB_ENV"
+
+      - name: Create release on Xposed-Modules-Repo
+        env:
+          GH_TOKEN: ${{ secrets.XP_REPO_PAT }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          TITLE="${{ steps.version.outputs.release_title }}"
+          BODY="${{ steps.changelog.outputs.changelog }}"
+          APK="${{ env.APK_PATH }}"
+
+          # Delete existing release/tag if present (force update)
+          gh release delete "$TAG" \
+            --repo "Xposed-Modules-Repo/io.github.chimio.inxlocker" \
+            --yes --cleanup-tag 2>/dev/null || true
+
+          # Create new release with APK asset
+          gh release create "$TAG" \
+            --repo "Xposed-Modules-Repo/io.github.chimio.inxlocker" \
+            --title "$TITLE" \
+            --notes "$BODY" \
+            "$APK"
