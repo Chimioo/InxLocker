@@ -36,8 +36,7 @@ object HotReloadTrigger {
     fun probe(): Capability {
         val service = XposedServiceHolder.get() ?: return Capability.NoService
         val ok = runCatching {
-            service.apiVersion >= XposedService.API_102 &&
-                (service.frameworkProperties and XposedService.PROP_RT_HOT_RELOAD) != 0L
+            service.apiVersion >= XposedService.API_102
         }.getOrDefault(false)
         return if (ok) Capability.Available else Capability.Unsupported
     }

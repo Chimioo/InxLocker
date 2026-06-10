@@ -65,9 +65,9 @@ class HookEntry : XposedModule() {
         xposed = this
         initXposed(this)
         PrefsProvider.init(getRemotePreferences("selected_installer_package"))
+        i(TAG, "Old hooks count: ${param.oldHookHandles.size}")
         i(TAG, "Loading new hooks")
         i(TAG, "isSystemServer=${param.isSystemServer}, processName=${param.processName}")
-        i(TAG, "Old hooks count: ${param.oldHookHandles.size}")
 
         val newHooks = if (param.isSystemServer) {
             val cl = param.oldHookHandles.firstOrNull()
