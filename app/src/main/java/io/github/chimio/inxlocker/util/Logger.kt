@@ -13,17 +13,28 @@ fun initXposed(xposed: XposedInterface) {
     io.github.chimio.inxlocker.util.xposed = xposed
 }
 
+private fun isDebugEnabled(): Boolean {
+    return try {
+        PrefsProvider.enableDebugLog.value
+    } catch (_: Throwable) {
+        true
+    }
+}
+
 fun d(tag: String = DEFAULT_LOG_TAG, message: String) {
+    if (!isDebugEnabled()) return
     Log.d(tag, message)
     xposed?.log(Log.DEBUG, tag, message)
 }
 
 fun i(tag: String = DEFAULT_LOG_TAG, message: String) {
+    if (!isDebugEnabled()) return
     Log.i(tag, message)
     xposed?.log(Log.INFO, tag, message)
 }
 
 fun w(tag: String = DEFAULT_LOG_TAG, message: String) {
+    if (!isDebugEnabled()) return
     Log.w(tag, message)
     xposed?.log(Log.WARN, tag, message)
 }
