@@ -55,10 +55,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -233,6 +235,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Immutable
+    private data class PrefsSnapshot(
+        val selectedPackage: String?,
+        val forcedComponents: Set<String>,
+        val followUninstallWithInstaller: Boolean,
+        val selectedUninstallerPackage: String?,
+        val hideIcon: Boolean,
+        val debugLogEnabled: Boolean,
+        val interceptUninstall: Boolean,
+        val interceptSessionInstall: Boolean,
+        val fixPermissions: Boolean
+    )
+
     @Composable
     private fun MainScreen() {
         var showInstallerDialog by remember { mutableStateOf(false) }
@@ -261,6 +276,36 @@ class MainActivity : ComponentActivity() {
         var interceptUninstallEnabled by remember { mutableStateOf(PrefsProvider.interceptUninstall.value) }
         var interceptSessionInstallEnabled by remember { mutableStateOf(PrefsProvider.interceptSessionInstall.value) }
         var fixPermissionsEnabled by remember { mutableStateOf(PrefsProvider.fixPermissions.value) }
+
+        LaunchedEffect(Unit) {
+            snapshotFlow {
+                PrefsSnapshot(
+                    selectedPackage = PrefsProvider.selectedInstallerPackage.value,
+                    forcedComponents = PrefsProvider.forcedInstallerComponents.value,
+                    followUninstallWithInstaller = PrefsProvider.followUninstallWithInstaller.value,
+                    selectedUninstallerPackage = PrefsProvider.selectedUninstallerPackage.value,
+                    hideIcon = PrefsProvider.hideLauncherIcon.value,
+                    debugLogEnabled = PrefsProvider.enableDebugLog.value,
+                    interceptUninstall = PrefsProvider.interceptUninstall.value,
+                    interceptSessionInstall = PrefsProvider.interceptSessionInstall.value,
+                    fixPermissions = PrefsProvider.fixPermissions.value
+                )
+            }.collect { s ->
+                if (s.selectedPackage != selectedPackage) selectedPackage = s.selectedPackage
+                if (s.forcedComponents != forcedComponentsWrapper.set)
+                    forcedComponentsWrapper = StableStringSet(s.forcedComponents)
+                if (s.followUninstallWithInstaller != followUninstallWithInstaller)
+                    followUninstallWithInstaller = s.followUninstallWithInstaller
+                if (s.selectedUninstallerPackage != selectedUninstallerPackage)
+                    selectedUninstallerPackage = s.selectedUninstallerPackage
+                if (s.hideIcon != hideIcon) hideIcon = s.hideIcon
+                if (s.debugLogEnabled != debugLogEnabled) debugLogEnabled = s.debugLogEnabled
+                if (s.interceptUninstall != interceptUninstallEnabled) interceptUninstallEnabled = s.interceptUninstall
+                if (s.interceptSessionInstall != interceptSessionInstallEnabled)
+                    interceptSessionInstallEnabled = s.interceptSessionInstall
+                if (s.fixPermissions != fixPermissionsEnabled) fixPermissionsEnabled = s.fixPermissions
+            }
+        }
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
