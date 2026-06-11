@@ -34,7 +34,7 @@ It is particularly suitable for devices with deeply customized systems.
 ### 3. Functional Adjustments
 - **Intercept Uninstallation**: When enabled, clicking to uninstall an app will jump to your set installer/uninstaller.
 - **Session Install Interception**: Mainly used to intercept silent/split installation confirmation interfaces on modern Android systems.
-- **Hot Reload**: After modifying configurations (such as changing the default installer), click the **"Hot Reload"** card on the home page. The module will attempt to update the configuration injected into processes without a reboot for instant effect.
+
 
 ## Notes
 
