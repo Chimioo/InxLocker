@@ -74,7 +74,7 @@ fun SettingsSwitchRow(
     item: SwitchItem,
     showDivider: Boolean
 ) {
-    var currentChecked by remember { mutableStateOf(item.isChecked) }
+    var currentChecked by remember(item.isChecked) { mutableStateOf(item.isChecked) }
     val onToggle: (Boolean) -> Unit = { newValue ->
         currentChecked = newValue
         item.onCheckedChange(newValue)
