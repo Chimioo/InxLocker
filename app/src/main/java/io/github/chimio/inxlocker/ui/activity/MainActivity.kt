@@ -213,6 +213,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Eagerly initialize PrefsProvider states outside Compose snapshot context
+        with(PrefsProvider) {
+            moduleActive
+            selectedInstallerPackage
+            forcedInstallerComponents
+            followUninstallWithInstaller
+            selectedUninstallerPackage
+            hideLauncherIcon
+            enableDebugLog
+            interceptUninstall
+            interceptSessionInstall
+            fixPermissions
+        }
         setContent {
             InxLockerTheme {
                 MainScreen()
@@ -228,20 +241,26 @@ class MainActivity : ComponentActivity() {
         val uninstallerListWrapper = remember { StableInstallerList(getUninstallerApps()) }
         val installerList = installerListWrapper.list
         val uninstallerList = uninstallerListWrapper.list
-        var selectedPackage by PrefsProvider.selectedInstallerPackage
+        var selectedPackage by remember {
+            mutableStateOf(PrefsProvider.selectedInstallerPackage.value)
+        }
         var forcedComponentsWrapper by remember {
             mutableStateOf(StableStringSet(PrefsProvider.forcedInstallerComponents.value))
         }
         val forcedComponents = forcedComponentsWrapper.set
 
-        var followUninstallWithInstaller by PrefsProvider.followUninstallWithInstaller
-        var selectedUninstallerPackage by PrefsProvider.selectedUninstallerPackage
+        var followUninstallWithInstaller by remember {
+            mutableStateOf(PrefsProvider.followUninstallWithInstaller.value)
+        }
+        var selectedUninstallerPackage by remember {
+            mutableStateOf(PrefsProvider.selectedUninstallerPackage.value)
+        }
 
-        var hideIcon by PrefsProvider.hideLauncherIcon
-        var debugLogEnabled by PrefsProvider.enableDebugLog
-        var interceptUninstallEnabled by PrefsProvider.interceptUninstall
-        var interceptSessionInstallEnabled by PrefsProvider.interceptSessionInstall
-        var fixPermissionsEnabled by PrefsProvider.fixPermissions
+        var hideIcon by remember { mutableStateOf(PrefsProvider.hideLauncherIcon.value) }
+        var debugLogEnabled by remember { mutableStateOf(PrefsProvider.enableDebugLog.value) }
+        var interceptUninstallEnabled by remember { mutableStateOf(PrefsProvider.interceptUninstall.value) }
+        var interceptSessionInstallEnabled by remember { mutableStateOf(PrefsProvider.interceptSessionInstall.value) }
+        var fixPermissionsEnabled by remember { mutableStateOf(PrefsProvider.fixPermissions.value) }
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -304,6 +323,7 @@ class MainActivity : ComponentActivity() {
                                     subtitle = stringResource(R.string.hide_icon_desc),
                                     isChecked = hideIcon,
                                     onCheckedChange = { newState ->
+                                        hideIcon = newState
                                         saveHideIconState(newState)
                                     }
                                 ),
@@ -317,6 +337,7 @@ class MainActivity : ComponentActivity() {
                                     subtitle = stringResource(R.string.debug_log_desc),
                                     isChecked = debugLogEnabled,
                                     onCheckedChange = { newState ->
+                                        debugLogEnabled = newState
                                         saveDebugLogEnabled(newState)
                                     }
                                 ),
@@ -330,6 +351,7 @@ class MainActivity : ComponentActivity() {
                                     subtitle = stringResource(R.string.intercept_uninstall_desc),
                                     isChecked = interceptUninstallEnabled,
                                     onCheckedChange = { newState ->
+                                        interceptUninstallEnabled = newState
                                         saveInterceptUninstallEnabled(newState)
                                     }
                                 ),
@@ -349,6 +371,7 @@ class MainActivity : ComponentActivity() {
                                             subtitle = stringResource(R.string.uninstall_follow_installer_desc),
                                             isChecked = followUninstallWithInstaller,
                                         onCheckedChange = { newState ->
+                                            followUninstallWithInstaller = newState
                                             saveFollowUninstallWithInstaller(newState)
                                         }
                                         ),
@@ -398,8 +421,10 @@ class MainActivity : ComponentActivity() {
                                     subtitle = stringResource(R.string.intercept_session_install_desc),
                                     isChecked = interceptSessionInstallEnabled,
                                     onCheckedChange = { newState ->
+                                        interceptSessionInstallEnabled = newState
                                         saveInterceptSessionInstallEnabled(newState)
                                         if (!newState) {
+                                            fixPermissionsEnabled = false
                                             saveFixPermissionsEnabled(false)
                                         }
                                     }
@@ -419,6 +444,7 @@ class MainActivity : ComponentActivity() {
                                         subtitle = stringResource(R.string.fix_permissions_desc),
                                         isChecked = fixPermissionsEnabled,
                                         onCheckedChange = { newState ->
+                                            fixPermissionsEnabled = newState
                                             saveFixPermissionsEnabled(newState)
                                         }
                                     ),
@@ -442,10 +468,12 @@ class MainActivity : ComponentActivity() {
                 forcedComponents = forcedComponentsWrapper,
                 onDismiss = { showInstallerDialog = false },
                 onInstallerSelected = { packageName ->
+                    selectedPackage = packageName
                     saveSelectedInstaller(packageName)
                     showInstallerDialog = false
                 },
                 onClearSelection = {
+                    selectedPackage = null
                     clearSelectedInstaller()
                     showInstallerDialog = false
                 },
@@ -466,10 +494,12 @@ class MainActivity : ComponentActivity() {
                 selectedPackage = selectedUninstallerPackage,
                 onDismiss = { showUninstallerDialog = false },
                 onUninstallerSelected = { packageName ->
+                    selectedUninstallerPackage = packageName
                     saveSelectedUninstallerPackage(packageName)
                     showUninstallerDialog = false
                 },
                 onClearSelection = {
+                    selectedUninstallerPackage = null
                     clearSelectedUninstallerPackage()
                     showUninstallerDialog = false
                 }
