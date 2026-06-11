@@ -12,7 +12,7 @@ It is particularly suitable for devices with deeply customized systems.
 - **Uninstallation Redirection**: Intercepts app uninstallation requests (via Intent) and hands them over to the specified program for processing.
 - **Session Interception (Session Install)**: Supports session installation interception for modern Android systems (intercepts `CONFIRM_INSTALL`).
 - **Forced Component Invocation**: Supports specifying a particular Activity component by long-pressing an installer list item (e.g., system installer), solving issues where some apps hardcode the installer.
-- **Hot Reload**: Based on `libxposed api 102` features, settings take effect immediately without a system reboot by clicking the "Hot Reload" button on the home page.
+- Hot Reload: Based on the feature of `libxposed api 102`, module updates take effect instantly without the need to restart the system.
 - **Permission Fix**: Provides experimental fixes for installation path permission issues in some Android 14+ environments.
 - **Hide Icon**: Supports hiding the launcher icon to keep the desktop tidy; settings can be accessed directly through the Xposed manager.
 
