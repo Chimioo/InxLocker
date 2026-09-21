@@ -53,4 +53,6 @@
     <string name="hot_reload_initial_subtitle">热重载以更新当前hook</string>
     <string name="hot_reload_no_targets">所有 Hook 进程均已是最新。</string>
     <string name="hot_reload_summary">完成 · 成功 %1$d / 失败 %2$d / 进程终止 %3$d（共 %4$d）</string>
+    <string name="bypass_coloros_adb_intercept_title">绕过 ColorOS ADB 拦截</string>
+    <string name="bypass_coloros_adb_intercept_desc">绕过 Oplus/ColorOS 将 adb install 重定向到默认安装器</string>
 </resources>

@@ -41,11 +41,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,9 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
-import io.github.chimio.inxlocker.util.HotReloadTrigger
 import io.github.chimio.inxlocker.util.PrefsProvider
-import io.github.chimio.inxlocker.util.XposedServiceHolder
 import io.github.chimio.inxlocker.R
 import io.github.chimio.inxlocker.ui.activity.ui.theme.InxLockerTheme
 import io.github.chimio.inxlocker.ui.widget.SettingsGroup
@@ -212,6 +208,10 @@ class MainActivity : ComponentActivity() {
         PrefsProvider.putBoolean(PrefsProvider.KEY_FIX_PERMISSIONS, enabled)
     }
 
+    private fun saveBypassColorOsAdbInterceptEnabled(enabled: Boolean) {
+        PrefsProvider.putBoolean(PrefsProvider.KEY_BYPASS_COLOROS_ADB_INTERCEPT, enabled)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -227,6 +227,7 @@ class MainActivity : ComponentActivity() {
             interceptUninstall
             interceptSessionInstall
             fixPermissions
+            bypassColorOsAdbIntercept
         }
         setContent {
             InxLockerTheme {
@@ -245,7 +246,8 @@ class MainActivity : ComponentActivity() {
         val debugLogEnabled: Boolean,
         val interceptUninstall: Boolean,
         val interceptSessionInstall: Boolean,
-        val fixPermissions: Boolean
+        val fixPermissions: Boolean,
+        val bypassColorOsAdbIntercept: Boolean
     )
 
     @Composable
@@ -276,6 +278,7 @@ class MainActivity : ComponentActivity() {
         var interceptUninstallEnabled by remember { mutableStateOf(PrefsProvider.interceptUninstall.value) }
         var interceptSessionInstallEnabled by remember { mutableStateOf(PrefsProvider.interceptSessionInstall.value) }
         var fixPermissionsEnabled by remember { mutableStateOf(PrefsProvider.fixPermissions.value) }
+        var bypassColorOsAdbInterceptEnabled by remember { mutableStateOf(PrefsProvider.bypassColorOsAdbIntercept.value) }
 
         LaunchedEffect(Unit) {
             snapshotFlow {
@@ -288,7 +291,8 @@ class MainActivity : ComponentActivity() {
                     debugLogEnabled = PrefsProvider.enableDebugLog.value,
                     interceptUninstall = PrefsProvider.interceptUninstall.value,
                     interceptSessionInstall = PrefsProvider.interceptSessionInstall.value,
-                    fixPermissions = PrefsProvider.fixPermissions.value
+                    fixPermissions = PrefsProvider.fixPermissions.value,
+                    bypassColorOsAdbIntercept = PrefsProvider.bypassColorOsAdbIntercept.value
                 )
             }.collect { s ->
                 if (s.selectedPackage != selectedPackage) selectedPackage = s.selectedPackage
@@ -304,6 +308,7 @@ class MainActivity : ComponentActivity() {
                 if (s.interceptSessionInstall != interceptSessionInstallEnabled)
                     interceptSessionInstallEnabled = s.interceptSessionInstall
                 if (s.fixPermissions != fixPermissionsEnabled) fixPermissionsEnabled = s.fixPermissions
+                if (s.bypassColorOsAdbIntercept != bypassColorOsAdbInterceptEnabled) bypassColorOsAdbInterceptEnabled = s.bypassColorOsAdbIntercept
             }
         }
 
@@ -320,10 +325,6 @@ class MainActivity : ComponentActivity() {
             ) {
                 item {
                     ModuleStatusCard()
-                }
-
-                item {
-                    HotReloadCard()
                 }
 
                 item {
@@ -496,6 +497,33 @@ class MainActivity : ComponentActivity() {
                                     showDivider = false
                                 )
                             }
+                        }
+                    }
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().animateContentSize(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column {
+                            SettingsSwitchRow(
+                                item = SwitchItem(
+                                    icon = Icons.Default.Warning,
+                                    title = stringResource(R.string.bypass_coloros_adb_intercept_title),
+                                    subtitle = stringResource(R.string.bypass_coloros_adb_intercept_desc),
+                                    isChecked = bypassColorOsAdbInterceptEnabled,
+                                    onCheckedChange = { newState ->
+                                        bypassColorOsAdbInterceptEnabled = newState
+                                        saveBypassColorOsAdbInterceptEnabled(newState)
+                                    }
+                                ),
+                                showDivider = false
+                            )
                         }
                     }
                 }
@@ -885,80 +913,6 @@ class MainActivity : ComponentActivity() {
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun HotReloadCard() {
-        val service by XposedServiceHolder.state
-        val cap = remember(service) { HotReloadTrigger.probe() }
-        var running by remember { mutableStateOf(false) }
-        var summary by remember { mutableStateOf<String?>(null) }
-        val available = cap is HotReloadTrigger.Capability.Available
-        val textNoTargets = stringResource(R.string.hot_reload_no_targets)
-        val textSummary = stringResource(R.string.hot_reload_summary)
-        val textRunning = stringResource(R.string.hot_reload_running)
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = available && !running) {
-                    running = true
-                    summary = null
-                    if (!HotReloadTrigger.reloadAllStale(
-                            onlyStale = true,
-                            onFinished = { outcome ->
-                                running = false
-                                summary = if (outcome.total == 0) textNoTargets
-                                else textSummary.format(outcome.success, outcome.failed, outcome.processDied, outcome.total)
-                            }
-                        )
-                    ) {
-                        running = false
-                    }
-                },
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (running) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        tint = if (available) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.hot_reload_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = summary ?: when {
-                            running -> textRunning
-                            !available -> stringResource(R.string.hot_reload_unavailable)
-                            else -> stringResource(R.string.hot_reload_initial_subtitle)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
                 }
             }
         }

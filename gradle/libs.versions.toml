@@ -10,8 +10,8 @@ material = "1.13.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
 composeBom = "2026.03.01"
-libxposedApi = "102.0.0-SNAPSHOT"
-libxposedService = "102.0.0-SNAPSHOT"
+libxposedApi = "102.0.0"
+libxposedService = "102.0.0"
 
 [libraries]
 androidx-compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }

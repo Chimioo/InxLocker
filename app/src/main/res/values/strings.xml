@@ -54,4 +54,6 @@
     <string name="hot_reload_initial_subtitle">Hot reload to update current hooks</string>
     <string name="hot_reload_no_targets">All hooked processes are already up to date.</string>
     <string name="hot_reload_summary">Done · success %1$d / failed %2$d / died %3$d (total %4$d)</string>
+    <string name="bypass_coloros_adb_intercept_title">Bypass ColorOS ADB Intercept</string>
+    <string name="bypass_coloros_adb_intercept_desc">Bypass Oplus/ColorOS redirection of adb install to default installer</string>
 </resources>

@@ -19,6 +19,7 @@ object PrefsProvider {
     const val KEY_INTERCEPT_UNINSTALL = "intercept_uninstall"
     const val KEY_INTERCEPT_SESSION_INSTALL = "intercept_session_install"
     const val KEY_FIX_PERMISSIONS = "fix_permissions"
+    const val KEY_BYPASS_COLOROS_ADB_INTERCEPT = "bypass_coloros_adb_intercept"
 
     private var prefs: SharedPreferences? = null
     private val cache = ConcurrentHashMap<String, Any>()
@@ -34,6 +35,7 @@ object PrefsProvider {
     val interceptUninstall = mutableStateOf(false)
     val interceptSessionInstall = mutableStateOf(false)
     val fixPermissions = mutableStateOf(false)
+    val bypassColorOsAdbIntercept = mutableStateOf(false)
 
     private val changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         key?.let {
@@ -62,6 +64,7 @@ object PrefsProvider {
             KEY_INTERCEPT_UNINSTALL -> interceptUninstall.value = value as? Boolean ?: false
             KEY_INTERCEPT_SESSION_INSTALL -> interceptSessionInstall.value = value as? Boolean ?: false
             KEY_FIX_PERMISSIONS -> fixPermissions.value = value as? Boolean ?: false
+            KEY_BYPASS_COLOROS_ADB_INTERCEPT -> bypassColorOsAdbIntercept.value = value as? Boolean ?: false
         }
     }
 
@@ -75,6 +78,7 @@ object PrefsProvider {
         interceptUninstall.value = getBoolean(KEY_INTERCEPT_UNINSTALL, false)
         interceptSessionInstall.value = getBoolean(KEY_INTERCEPT_SESSION_INSTALL, false)
         fixPermissions.value = getBoolean(KEY_FIX_PERMISSIONS, false)
+        bypassColorOsAdbIntercept.value = getBoolean(KEY_BYPASS_COLOROS_ADB_INTERCEPT, false)
     }
 
     fun isModuleActive(): Boolean = _moduleActive

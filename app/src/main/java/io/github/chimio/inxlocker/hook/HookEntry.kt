@@ -47,6 +47,7 @@ class HookEntry : XposedModule() {
         systemServerClassLoader = param.classLoader
         hookActivityStarterExecute(param.classLoader)
         hookPackageInstallerSession(param.classLoader)
+        hookColorOsAdbIntercept(param.classLoader)
     }
 
     override fun onPackageReady(param: XposedModuleInterface.PackageReadyParam) {
@@ -100,6 +101,7 @@ class HookEntry : XposedModule() {
         }
     }
 
+    @SuppressLint("PrivateApi")
     private fun buildSystemServerHooks(cl: ClassLoader): MutableMap<String, Pair<java.lang.reflect.Method, XposedInterface.Hooker>> {
         val map = mutableMapOf<String, Pair<java.lang.reflect.Method, XposedInterface.Hooker>>()
         val targetClassName = if (Build.VERSION.SDK_INT >= 29)
@@ -186,6 +188,26 @@ class HookEntry : XposedModule() {
                 }
             }
         }
+
+        val colorOsClass = try { cl.loadClass("com.android.server.pm.OplusPackageInstallInterceptManager") } catch (_: Exception) { null }
+        if (colorOsClass != null) {
+            val colorOsMethods = listOf("handleForAdbSessionInstaller", "allowInterceptAdbInstallInInstallStage", "allowInterceptSilentInstallerInStallStage")
+            for (methodName in colorOsMethods) {
+                runCatching {
+                    val method = colorOsClass.declaredMethods.firstOrNull {
+                        it.name == methodName && it.returnType == Boolean::class.javaPrimitiveType
+                    } ?: return@runCatching
+                    map["coloros_bypass_$methodName"] = method to XposedInterface.Hooker { chain ->
+                        if (PrefsProvider.getBoolean("bypass_coloros_adb_intercept", false)) {
+                            i(TAG, "Bypassing ColorOS ADB intercept (hot-reload): $methodName")
+                            return@Hooker false
+                        }
+                        chain.proceed()
+                    }
+                }
+            }
+        }
+
         return map
     }
 
@@ -377,6 +399,43 @@ class HookEntry : XposedModule() {
                     return result
                 }
             })
+        }
+    }
+
+    @SuppressLint("PrivateApi")
+    private fun hookColorOsAdbIntercept(cl: ClassLoader) {
+        val targetClass = try {
+            cl.loadClass("com.android.server.pm.OplusPackageInstallInterceptManager")
+        } catch (_: Exception) {
+            i(TAG, "OplusPackageInstallInterceptManager not found, skipping ColorOS ADB bypass hook")
+            return
+        }
+        i(TAG, "OplusPackageInstallInterceptManager found, hooking for ColorOS ADB bypass")
+
+        val methodsToHook = listOf(
+            "handleForAdbSessionInstaller",
+            "allowInterceptAdbInstallInInstallStage",
+            "allowInterceptSilentInstallerInStallStage"
+        )
+
+        for (methodName in methodsToHook) {
+            runCatching {
+                val method = targetClass.declaredMethods.firstOrNull {
+                    it.name == methodName &&
+                    it.returnType == Boolean::class.javaPrimitiveType
+                } ?: return@runCatching
+
+                hook(method).tryId("coloros_bypass_$methodName").intercept(object : XposedInterface.Hooker {
+                    override fun intercept(chain: XposedInterface.Chain): Any? {
+                        if (PrefsProvider.getBoolean("bypass_coloros_adb_intercept", false)) {
+                            i(TAG, "Bypassing ColorOS ADB intercept: $methodName")
+                            return false
+                        }
+                        return chain.proceed()
+                    }
+                })
+                i(TAG, "Hooked $methodName for ColorOS ADB bypass")
+            }
         }
     }
 
