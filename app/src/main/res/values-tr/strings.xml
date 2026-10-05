@@ -5,7 +5,7 @@
     <string name="module_status_active">Modül Aktif</string>
     <string name="module_status_inactive">Modül Aktif Değil</string>
     <string name="module_status_active_desc">InxLocker normal şekilde çalışıyor</string>
-    <string name="module_status_inactive_desc">Lütfen modülü Xposed Yöneticisi'nden etkinleştirin</string>
+    <string name="module_status_inactive_desc">Lütfen modülü Xposed Yöneticisi\'nden etkinleştirin</string>
 
     <string name="installer_settings_title">Varsayılan Yükleyici Ayarları</string>
     <string name="installer_settings_desc">APK dosyalarını yüklemek için varsayılan uygulamayı seçin</string>
@@ -27,7 +27,7 @@
     <string name="debug_log_disabled_toast">Günlük kaydı devre dışı bırakıldı</string>
 
     <string name="intercept_uninstall_title">Kaldırma İsteklerini Yakala</string>
-    <string name="intercept_uninstall_desc">Yalnızca Intent'i yakalar, kaldırma işlemi için yükleyicinin bunu desteklemesi gerekir</string>
+    <string name="intercept_uninstall_desc">Yalnızca Intent\'i yakalar, kaldırma işlemi için yükleyicinin bunu desteklemesi gerekir</string>
     <string name="intercept_uninstall_enabled_toast">Kaldırma isteklerini yakalama etkinleştirildi</string>
     <string name="intercept_uninstall_disabled_toast">Kaldırma isteklerini yakalama devre dışı bırakıldı</string>
 
@@ -49,14 +49,14 @@
     <string name="fix_permissions_disabled_toast">İzin düzeltmesi devre dışı bırakıldı</string>
 
     <string name="instructions_title">Kullanım</string>
-    <string name="instructions_content">Modülün Xposed framework'te etkinleştirildiğinden emin olun\nVarsayılan yükleyiciyi seçtikten sonra sistem, APK yüklemek için öncelikle bu uygulamayı kullanır\nKaldırma isteklerini yakalama etkinleştirildiğinde, uygulama kaldırma işlemleri belirtilen yükleyiciye yönlendirilir\nUygulama ayarlarına Xposed Yöneticisi'nden erişebilirsiniz</string>
+    <string name="instructions_content">Modülün Xposed framework\'te etkinleştirildiğinden emin olun\nVarsayılan yükleyiciyi seçtikten sonra sistem, APK yüklemek için öncelikle bu uygulamayı kullanır\nKaldırma isteklerini yakalama etkinleştirildiğinde, uygulama kaldırma işlemleri belirtilen yükleyiciye yönlendirilir\nUygulama ayarlarına Xposed Yöneticisi'nden erişebilirsiniz</string>
 
     <string name="close">Kapat</string>
     <string name="selected">Seçildi</string>
     <string name="settings">Ayarlar</string>
 
     <string name="view_source_code">Kaynak Kodunu Görüntüle</string>
-    <string name="source_code_desc">Kaynak kodunu GitHub'da görüntüleyin</string>
+    <string name="source_code_desc">Kaynak kodunu GitHub\'da görüntüleyin</string>
     <string name="github_url">https://github.com/Chimioo/inxlocker</string>
 
     <string name="module_description">Uygulama yükleme isteklerini yakalayıp başka bir yükleyiciye yönlendirir~</string>
@@ -64,10 +64,10 @@
     <string name="hot_reload_title">Sıcak Yeniden Yükleme</string>
     <string name="hot_reload_unavailable">Sıcak yeniden yükleme kullanılamıyor</string>
     <string name="hot_reload_running">Yeniden yükleniyor…</string>
-    <string name="hot_reload_initial_subtitle">Mevcut hook'ları güncellemek için sıcak yeniden yükleme yapın</string>
+    <string name="hot_reload_initial_subtitle">Mevcut hook\'ları güncellemek için sıcak yeniden yükleme yapın</string>
     <string name="hot_reload_no_targets">Tüm hook uygulanmış işlemler zaten güncel.</string>
     <string name="hot_reload_summary">Tamamlandı · başarılı %1$d / başarısız %2$d / sonlandırılan %3$d (toplam %4$d)</string>
 
     <string name="bypass_coloros_adb_intercept_title">ColorOS ADB Yönlendirmesini Atla</string>
-    <string name="bypass_coloros_adb_intercept_desc">Oplus/ColorOS'un adb install işlemlerini varsayılan yükleyiciye yönlendirmesini atla</string>
+    <string name="bypass_coloros_adb_intercept_desc">Oplus/ColorOS\'un adb install işlemlerini varsayılan yükleyiciye yönlendirmesini atla</string>
 </resources>
