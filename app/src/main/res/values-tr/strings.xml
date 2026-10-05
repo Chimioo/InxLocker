@@ -17,7 +17,7 @@
     <string name="installer_restored">Varsayılan ayarlar geri yüklendi</string>
 
     <string name="hide_icon_title">Uygulama Simgesini Gizle</string>
-    <string name="hide_icon_desc">Başlatıcıdaki simgeyi gizle, Xposed Yöneticisi'nden erişin</string>
+    <string name="hide_icon_desc">Başlatıcıdaki simgeyi gizle, Xposed Yöneticisi\'nden erişin</string>
     <string name="hide_icon_enabled_toast">Uygulama simgesi gizlenecek</string>
     <string name="hide_icon_disabled_toast">Uygulama simgesi başlatıcıda gösterilecek</string>
 
