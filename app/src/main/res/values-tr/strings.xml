@@ -1,0 +1,73 @@
+<resources>
+    <string name="app_name">InxLocker</string>
+    <string name="title_activity_main">MainActivity</string>
+
+    <string name="module_status_active">Modül Aktif</string>
+    <string name="module_status_inactive">Modül Aktif Değil</string>
+    <string name="module_status_active_desc">InxLocker normal şekilde çalışıyor</string>
+    <string name="module_status_inactive_desc">Lütfen modülü Xposed Yöneticisi'nden etkinleştirin</string>
+
+    <string name="installer_settings_title">Varsayılan Yükleyici Ayarları</string>
+    <string name="installer_settings_desc">APK dosyalarını yüklemek için varsayılan uygulamayı seçin</string>
+    <string name="installer_system_default">Sistem Varsayılanı</string>
+    <string name="installer_system_default_desc">Sistemin varsayılan yükleyicisini kullan</string>
+    <string name="installer_click_to_change">Değiştirmek için dokunun</string>
+    <string name="installer_selection_dialog_title">Varsayılan Yükleyiciyi Seçin</string>
+    <string name="installer_saved">Yükleyici ayarları kaydedildi</string>
+    <string name="installer_restored">Varsayılan ayarlar geri yüklendi</string>
+
+    <string name="hide_icon_title">Uygulama Simgesini Gizle</string>
+    <string name="hide_icon_desc">Başlatıcıdaki simgeyi gizle, Xposed Yöneticisi'nden erişin</string>
+    <string name="hide_icon_enabled_toast">Uygulama simgesi gizlenecek</string>
+    <string name="hide_icon_disabled_toast">Uygulama simgesi başlatıcıda gösterilecek</string>
+
+    <string name="debug_log_title">Günlük Kaydını Etkinleştir</string>
+    <string name="debug_log_desc">Hata ayıklama günlüklerini etkinleştir</string>
+    <string name="debug_log_enabled_toast">Günlük kaydı etkinleştirildi</string>
+    <string name="debug_log_disabled_toast">Günlük kaydı devre dışı bırakıldı</string>
+
+    <string name="intercept_uninstall_title">Kaldırma İsteklerini Yakala</string>
+    <string name="intercept_uninstall_desc">Yalnızca Intent'i yakalar, kaldırma işlemi için yükleyicinin bunu desteklemesi gerekir</string>
+    <string name="intercept_uninstall_enabled_toast">Kaldırma isteklerini yakalama etkinleştirildi</string>
+    <string name="intercept_uninstall_disabled_toast">Kaldırma isteklerini yakalama devre dışı bırakıldı</string>
+
+    <string name="uninstall_follow_installer_title">Yükleyiciyi Takip Et</string>
+    <string name="uninstall_follow_installer_desc">Kaldırma yönlendirmesi için kullanılan uygulama varsayılan yükleyiciyi takip eder</string>
+    <string name="uninstall_default_uninstaller_title">Varsayılan Kaldırıcıyı Seçin</string>
+    <string name="uninstall_default_uninstaller_subtitle_default">Sistem Varsayılanı</string>
+    <string name="uninstall_default_uninstaller_system_label">Sistem Varsayılanı</string>
+    <string name="uninstall_default_uninstaller_system_desc">Sistemin varsayılan kaldırıcısını kullan</string>
+
+    <string name="intercept_session_install_title">Oturum Yüklemelerini Yakala</string>
+    <string name="intercept_session_install_desc">CONFIRM_INSTALL isteklerini yakala</string>
+    <string name="intercept_session_install_enabled_toast">Oturum yüklemelerini yakalama etkinleştirildi</string>
+    <string name="intercept_session_install_disabled_toast">Oturum yüklemelerini yakalama devre dışı bırakıldı</string>
+
+    <string name="fix_permissions_title">İzinleri Düzelt</string>
+    <string name="fix_permissions_desc">Android 14 ve sonraki sürümlerde oturum yolları için izin denetiminin geçilmesini zorla</string>
+    <string name="fix_permissions_enabled_toast">İzin düzeltmesi etkinleştirildi</string>
+    <string name="fix_permissions_disabled_toast">İzin düzeltmesi devre dışı bırakıldı</string>
+
+    <string name="instructions_title">Kullanım</string>
+    <string name="instructions_content">Modülün Xposed framework'te etkinleştirildiğinden emin olun\nVarsayılan yükleyiciyi seçtikten sonra sistem, APK yüklemek için öncelikle bu uygulamayı kullanır\nKaldırma isteklerini yakalama etkinleştirildiğinde, uygulama kaldırma işlemleri belirtilen yükleyiciye yönlendirilir\nUygulama ayarlarına Xposed Yöneticisi'nden erişebilirsiniz</string>
+
+    <string name="close">Kapat</string>
+    <string name="selected">Seçildi</string>
+    <string name="settings">Ayarlar</string>
+
+    <string name="view_source_code">Kaynak Kodunu Görüntüle</string>
+    <string name="source_code_desc">Kaynak kodunu GitHub'da görüntüleyin</string>
+    <string name="github_url">https://github.com/Chimioo/inxlocker</string>
+
+    <string name="module_description">Uygulama yükleme isteklerini yakalayıp başka bir yükleyiciye yönlendirir~</string>
+
+    <string name="hot_reload_title">Sıcak Yeniden Yükleme</string>
+    <string name="hot_reload_unavailable">Sıcak yeniden yükleme kullanılamıyor</string>
+    <string name="hot_reload_running">Yeniden yükleniyor…</string>
+    <string name="hot_reload_initial_subtitle">Mevcut hook'ları güncellemek için sıcak yeniden yükleme yapın</string>
+    <string name="hot_reload_no_targets">Tüm hook uygulanmış işlemler zaten güncel.</string>
+    <string name="hot_reload_summary">Tamamlandı · başarılı %1$d / başarısız %2$d / sonlandırılan %3$d (toplam %4$d)</string>
+
+    <string name="bypass_coloros_adb_intercept_title">ColorOS ADB Yönlendirmesini Atla</string>
+    <string name="bypass_coloros_adb_intercept_desc">Oplus/ColorOS'un adb install işlemlerini varsayılan yükleyiciye yönlendirmesini atla</string>
+</resources>
