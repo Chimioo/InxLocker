@@ -49,7 +49,7 @@
     <string name="fix_permissions_disabled_toast">İzin düzeltmesi devre dışı bırakıldı</string>
 
     <string name="instructions_title">Kullanım</string>
-    <string name="instructions_content">Modülün Xposed framework\'te etkinleştirildiğinden emin olun\nVarsayılan yükleyiciyi seçtikten sonra sistem, APK yüklemek için öncelikle bu uygulamayı kullanır\nKaldırma isteklerini yakalama etkinleştirildiğinde, uygulama kaldırma işlemleri belirtilen yükleyiciye yönlendirilir\nUygulama ayarlarına Xposed Yöneticisi'nden erişebilirsiniz</string>
+    <string name="instructions_content">Modülün Xposed framework\'te etkinleştirildiğinden emin olun\nVarsayılan yükleyiciyi seçtikten sonra sistem, APK yüklemek için öncelikle bu uygulamayı kullanır\nKaldırma isteklerini yakalama etkinleştirildiğinde, uygulama kaldırma işlemleri belirtilen yükleyiciye yönlendirilir\nUygulama ayarlarına Xposed Yöneticisi\'nden erişebilirsiniz</string>
 
     <string name="close">Kapat</string>
     <string name="selected">Seçildi</string>
