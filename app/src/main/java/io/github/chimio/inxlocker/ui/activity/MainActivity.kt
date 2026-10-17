@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
+import io.github.chimio.inxlocker.util.ComponentResolver
 import io.github.chimio.inxlocker.util.PrefsProvider
 import io.github.chimio.inxlocker.R
 import io.github.chimio.inxlocker.ui.activity.ui.theme.InxLockerTheme
@@ -132,10 +133,12 @@ class MainActivity : ComponentActivity() {
 
     private fun saveSelectedInstaller(packageName: String) {
         PrefsProvider.putString(PrefsProvider.KEY_SELECTED_INSTALLER_PACKAGE, packageName)
+        ComponentResolver.invalidate()
     }
 
     private fun clearSelectedInstaller() {
         PrefsProvider.remove(PrefsProvider.KEY_SELECTED_INSTALLER_PACKAGE)
+        ComponentResolver.invalidate()
     }
 
     private fun saveForcedInstallerComponents(values: Set<String>) {

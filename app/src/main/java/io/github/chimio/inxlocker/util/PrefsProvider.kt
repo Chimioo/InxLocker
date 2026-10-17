@@ -46,6 +46,11 @@ object PrefsProvider {
                 cache.remove(it)
             }
             syncField(it, newValue)
+            if (it == KEY_SELECTED_INSTALLER_PACKAGE || it == KEY_SELECTED_UNINSTALLER_PACKAGE ||
+                it == KEY_FORCED_INSTALLER_COMPONENTS
+            ) {
+                ComponentResolver.invalidate()
+            }
             d(TAG, "Config updated: $it = $newValue")
         }
     }

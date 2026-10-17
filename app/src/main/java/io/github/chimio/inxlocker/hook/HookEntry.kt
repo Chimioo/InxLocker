@@ -3,6 +3,7 @@ package io.github.chimio.inxlocker.hook
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Build
+import io.github.chimio.inxlocker.util.ComponentResolver
 import io.github.chimio.inxlocker.util.IntentAnalyzer
 import io.github.chimio.inxlocker.util.IntentRedirector
 import io.github.chimio.inxlocker.util.PrefsProvider
@@ -66,6 +67,7 @@ class HookEntry : XposedModule() {
         xposed = this
         initXposed(this)
         PrefsProvider.init(getRemotePreferences("selected_installer_package"))
+        ComponentResolver.invalidate()
         i(TAG, "Old hooks count: ${param.oldHookHandles.size}")
         i(TAG, "Loading new hooks")
         i(TAG, "isSystemServer=${param.isSystemServer}, processName=${param.processName}")
