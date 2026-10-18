@@ -60,6 +60,8 @@ object IntentRedirector {
     private fun applyRedirection(intent: Intent) {
         val isUninstall = intent.action == ACTION_DELETE || intent.action == ACTION_UNINSTALL_PACKAGE
         val targetPackage = getTargetPackageForIntent(intent)
+        // 先规范化 action：INSTALL_PACKAGE 会被转成 VIEW，后面查候选组件时要按最终 action 匹配
+        normalizeAction(intent)
 
         if (!targetPackage.isNullOrBlank()) {
             if (isUninstall) {
@@ -72,8 +74,16 @@ object IntentRedirector {
                     intent.component = forcedComponent
                     intent.`package` = null
                 } else {
+                    // 先按原有行为只设 package；若系统会把它交给第三方 Resolver（HarmonyOS/EMUI 的
+                    // HwResolverActivity 会无视 package 直接抢占安装类 Intent），改下发显式 component。
                     intent.component = null
                     intent.setPackage(targetPackage)
+                    val explicitComponent = ComponentResolver.resolveExplicitComponent(intent, targetPackage)
+                    if (explicitComponent != null) {
+                        intent.component = explicitComponent
+                        intent.`package` = null
+                        i(TAG, "Using explicit component to bypass resolver hijack: $explicitComponent")
+                    }
                 }
             }
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -83,7 +93,6 @@ object IntentRedirector {
                 intent.`package` = null
             }
         }
-        normalizeAction(intent)
     }
 
     private fun normalizeAction(intent: Intent) {
@@ -100,6 +109,7 @@ object IntentRedirector {
     private fun logRedirection(current: Intent, tag: String) {
         i(tag, "Intent redirection:")
         i(tag, "- Target package: ${current.`package` ?: "<system default>"}")
+        i(tag, "- Target component: ${current.component ?: "<none>"}")
         i(tag, "- Intent action: ${current.action}")
         i(tag, "- Intent extras: ${IntentAnalyzer.formatExtras(current)}")
         if (current.action == ACTION_DELETE || current.action == ACTION_UNINSTALL_PACKAGE) {
